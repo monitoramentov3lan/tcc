@@ -3,107 +3,238 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="refresh" content="300">
 <title>Monitoramento - TCC</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
-    :root { --primary: #2c3e50; --secondary: #34495e; --accent: #3498db; --success: #27ae60; --warning: #f39c12; --danger: #c0392b; --bg: #f4f6f7; --card-bg: #ffffff; --text: #333; }
-    [data-theme="dark"] { --primary: #ecf0f1; --secondary: #bdc3c7; --bg: #2c3e50; --card-bg: #34495e; --text: #ecf0f1; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; min-height: 100vh; transition: 0.3s; }
-    .container { width: 95%; max-width: 1400px; margin: 0 auto; padding: 20px 0; }
-    header { background-color: var(--card-bg); padding: 15px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; }
-    .header-content { display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-wrap: wrap; gap: 10px; }
-    .controls-area { display: flex; gap: 10px; align-items: center; }
-    .search-box { padding: 8px; border-radius: 5px; border: 1px solid #ccc; width: 200px; }
-    .btn-toggle { cursor: pointer; background: none; border: 1px solid var(--text); padding: 5px 10px; border-radius: 5px; color: var(--text); }
-    .charts-row { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; }
-    .chart-container { flex: 1; min-width: 300px; background: var(--card-bg); padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: relative; height: 300px; }
-    .tabs { display: flex; gap: 10px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px; }
-    .tab-btn { padding: 10px 20px; border: none; background: #dfe6e9; cursor: pointer; border-radius: 5px; font-weight: 600; color: #636e72; transition: 0.3s; white-space: nowrap; }
-    .tab-btn.active { background: var(--primary); color: var(--bg); }
-    .tab-btn.active.t-critical { background: var(--danger); color: white; }
-    .view-section { display: none; animation: fadeIn 0.3s; }
+    :root {
+        --primary: #2563eb; --primary-dark: #1e40af; --secondary: #64748b;
+        --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+        --bg: #f3f4f6; --card-bg: #ffffff; --text: #1f2937; --text-light: #6b7280;
+        --border: #e5e7eb; --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    [data-theme="dark"] {
+        --primary: #3b82f6; --primary-dark: #60a5fa; --secondary: #94a3b8;
+        --bg: #0f172a; --card-bg: #1e293b; --text: #f3f4f6; --text-light: #9ca3af;
+        --border: #334155; --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+    
+    body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding-bottom: 40px; transition: background-color 0.3s, color 0.3s; }
+    
+    /* Layout & Grid */
+    .container { max-width: 1440px; margin: 0 auto; padding: 0 20px; }
+    .header-wrapper { background-color: var(--card-bg); border-bottom: 1px solid var(--border); padding: 1rem 0; position: sticky; top: 0; z-index: 50; box-shadow: var(--shadow); }
+    .header-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+    
+    /* KPI Section */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 25px; margin-bottom: 25px; }
+    .kpi-card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: var(--shadow); border: 1px solid var(--border); display: flex; flex-direction: column; }
+    .kpi-title { font-size: 0.875rem; color: var(--text-light); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .kpi-value { font-size: 2rem; font-weight: 700; margin-top: 5px; color: var(--text); }
+    .kpi-sub { font-size: 0.85rem; margin-top: auto; padding-top: 10px; }
+    
+    /* Controls */
+    .controls-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; background: var(--card-bg); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border); box-shadow: var(--shadow); }
+    .search-input { flex: 1; min-width: 200px; padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); outline: none; transition: 0.2s; }
+    .search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+    .btn { padding: 10px 20px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-outline:hover { background: var(--border); }
+    .btn-export { background: var(--success); color: white; }
+    .btn-export:hover { filter: brightness(1.1); }
+
+    /* Charts */
+    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-bottom: 25px; }
+    .chart-box { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: var(--shadow); border: 1px solid var(--border); height: 320px; position: relative; }
+
+    /* Tabs */
+    .tabs-nav { display: flex; gap: 5px; margin-bottom: 20px; background: var(--card-bg); padding: 5px; border-radius: 10px; border: 1px solid var(--border); width: fit-content; }
+    .tab-item { padding: 10px 25px; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-light); transition: 0.2s; user-select: none; }
+    .tab-item.active { background: var(--primary); color: white; }
+    .tab-item.active.tab-crit { background: var(--danger); }
+    
+    /* Views */
+    .view-section { display: none; animation: fadeIn 0.4s ease; }
     .view-section.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-    table { width: 100%; border-collapse: collapse; background: var(--card-bg); border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); color: var(--text); }
-    th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }
-    th { background-color: rgba(0,0,0,0.05); font-weight: 600; cursor: pointer; }
-    th:hover { background-color: rgba(0,0,0,0.1); }
-    .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; display: inline-block; min-width: 80px; text-align: center; }
-    .badge-offline { background-color: rgba(243, 156, 18, 0.15); color: #d35400; }
-    .badge-critical { background-color: rgba(231, 76, 60, 0.15); color: var(--danger); border: 1px solid var(--danger); }
-    .vehicle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
-    .v-card { background: var(--card-bg); padding: 15px; border-radius: 8px; border: 1px solid #eee; cursor: pointer; position: relative; overflow: hidden; transition: transform 0.2s; }
-    .v-card:hover { transform: translateY(-3px); border-color: var(--success); }
-    .v-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background-color: var(--success); }
-    .v-card.critical-border::before { background-color: var(--danger); }
-    .v-prefix { font-size: 1.3rem; font-weight: bold; color: var(--text); }
-    .v-sub { font-size: 0.85rem; color: #7f8c8d; display: block; margin-top: 5px; }
-    .modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-    .modal-content { background-color: var(--card-bg); margin: 10% auto; padding: 25px; border-radius: 10px; width: 90%; max-width: 500px; position: relative; color: var(--text); }
-    .close-modal { position: absolute; right: 20px; top: 15px; font-size: 28px; cursor: pointer; }
-    .hidden { display: none; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Vehicle Cards */
+    .vehicle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
+    .v-card { background: var(--card-bg); border-radius: 10px; padding: 15px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; position: relative; overflow: hidden; }
+    .v-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border-color: var(--primary); }
+    .v-card::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 4px; background: var(--success); }
+    .v-card.outdated::after { background: var(--warning); }
+    .v-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px; }
+    .v-id { font-size: 1.5rem; font-weight: 700; color: var(--text); line-height: 1; }
+    .v-time { font-size: 0.8rem; color: var(--text-light); display: flex; align-items: center; gap: 4px; }
+    .v-meta { font-size: 0.75rem; color: var(--text-light); background: var(--bg); padding: 4px 8px; border-radius: 4px; margin-top: 8px; display: inline-block; }
+    
+    /* Tables */
+    .table-container { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); background: var(--card-bg); box-shadow: var(--shadow); }
+    table { width: 100%; border-collapse: collapse; min-width: 600px; }
+    th, td { padding: 15px 20px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background: var(--bg); font-weight: 600; color: var(--text-light); font-size: 0.85rem; text-transform: uppercase; cursor: pointer; }
+    th:hover { color: var(--primary); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background-color: rgba(0,0,0,0.02); }
+    
+    /* Badges */
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; }
+    .badge-offline { background: rgba(245, 158, 11, 0.1); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.2); }
+    .badge-error { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); }
+    
+    /* Modal */
+    .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+    .modal-content { background-color: var(--card-bg); margin: 5vh auto; padding: 0; border-radius: 16px; width: 90%; max-width: 600px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); animation: slideIn 0.3s; }
+    @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-header { padding: 20px 25px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .modal-body { padding: 25px; }
+    .close-modal { font-size: 1.5rem; cursor: pointer; color: var(--text-light); transition: 0.2s; }
+    .close-modal:hover { color: var(--danger); }
+    
+    /* Utility */
+    #refresh-bar { height: 3px; background: var(--primary); width: 100%; position: absolute; bottom: 0; left: 0; transition: width 1s linear; }
+    .hidden { display: none !important; }
+    .text-danger { color: var(--danger); }
+    
+    @media (max-width: 768px) {
+        .header-content { flex-direction: column; align-items: flex-start; }
+        .controls-area { width: 100%; }
+        .search-box { width: 100%; }
+    }
 </style>
 </head>
 <body>
-<header>
+
+<header class="header-wrapper">
     <div class="container header-content">
         <div>
-            <h1 style="margin:0">📊 TCC</h1>
-            <small id="last-update">Atualizado: 09:43</small>
+            <h1 style="margin:0; font-size: 1.5rem; display: flex; align-items: center; gap: 10px;">
+                📊 TCC 
+                <span style="font-size: 0.8rem; font-weight: 400; padding: 4px 10px; background: var(--bg); border-radius: 20px; border: 1px solid var(--border);">v2.0</span>
+            </h1>
+            <small style="color: var(--text-light); display: block; margin-top: 5px;">Última atualização: 11:22</small>
         </div>
-        <div class="controls-area">
-            <input type="text" id="globalSearch" class="search-box" placeholder="🔍 Buscar Veículo...">
-            <select id="metaFilter" class="search-box">
-                <option value="all">Todos os Filtros</option>
-                <option value="old_eod">Versão EOD Desatualizada</option>
-            </select>
-            <button class="btn-toggle" onclick="toggleTheme()">🌓</button>
-            <input type="date" id="datePicker" value="2026-02-24" style="padding: 7px; border-radius: 5px;">
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="btn btn-outline" onclick="toggleTheme()" title="Mudar Tema">🌓 Tema</button>
+            <button class="btn btn-export" onclick="exportData()" title="Baixar CSV">📥 Exportar</button>
         </div>
+        <div id="refresh-bar"></div>
     </div>
 </header>
+
 <div class="container">
-    <div class="charts-row">
-        <div class="chart-container"><canvas id="trendChart"></canvas></div>
-        <div class="chart-container"><canvas id="statusChart"></canvas></div>
+    
+    <div class="kpi-grid">
+        <div class="kpi-card" style="border-left: 5px solid var(--success);">
+            <span class="kpi-title">Veículos Online</span>
+            <div class="kpi-value" id="kpi-online">0</div>
+            <div class="kpi-sub" style="color: var(--success);">Funcionando corretamente</div>
+        </div>
+        <div class="kpi-card" style="border-left: 5px solid var(--danger);">
+            <span class="kpi-title">Críticos / Erros</span>
+            <div class="kpi-value" id="kpi-critical">0</div>
+            <div class="kpi-sub" style="color: var(--danger);">Requer atenção imediata</div>
+        </div>
+        <div class="kpi-card" style="border-left: 5px solid var(--warning);">
+            <span class="kpi-title">Offline</span>
+            <div class="kpi-value" id="kpi-offline">0</div>
+            <div class="kpi-sub" style="color: var(--warning);">Sem comunicação hoje</div>
+        </div>
+        <div class="kpi-card" style="border-left: 5px solid var(--primary);">
+            <span class="kpi-title">Taxa de Sucesso</span>
+            <div class="kpi-value" id="kpi-rate">0%</div>
+            <div class="kpi-sub" style="color: var(--primary);">Eficiência da frota</div>
+        </div>
     </div>
-    <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('tab-online')">✅ Online (<span id="cnt-online">0</span>)</button>
-        <button class="tab-btn t-critical" onclick="switchTab('tab-critical')">🚨 Críticos/Erro (<span id="cnt-critical">0</span>)</button>
-        <button class="tab-btn" onclick="switchTab('tab-offline')">⚠️ Offline (<span id="cnt-offline">0</span>)</button>
+
+    <div class="charts-grid">
+        <div class="chart-box">
+            <h3 style="margin-top:0; color:var(--text-light); font-size:1rem;">Tendência (30 Dias)</h3>
+            <div style="height: 250px;"><canvas id="trendChart"></canvas></div>
+        </div>
+        <div class="chart-box">
+            <h3 style="margin-top:0; color:var(--text-light); font-size:1rem;">Distribuição Atual</h3>
+            <div style="height: 250px; position: relative;"><canvas id="statusChart"></canvas></div>
+        </div>
     </div>
+
+    <div class="controls-bar">
+        <input type="text" id="globalSearch" class="search-input" placeholder="🔍 Buscar por prefixo, erro ou versão...">
+        <select id="metaFilter" class="search-input" style="max-width: 200px;">
+            <option value="all">Todos os Filtros</option>
+            <option value="old_eod">EOD Desatualizado</option>
+            <option value="has_error">Com Erro</option>
+        </select>
+        <input type="date" id="datePicker" class="search-input" value="2026-02-24" style="max-width: 160px;">
+    </div>
+
+    <div class="tabs-nav">
+        <div class="tab-item active" onclick="switchTab('tab-online')">✅ Online</div>
+        <div class="tab-item tab-crit" onclick="switchTab('tab-critical')">🚨 Erros</div>
+        <div class="tab-item" onclick="switchTab('tab-offline')">⚠️ Offline</div>
+    </div>
+
     <div id="tab-online" class="view-section active">
         <div class="vehicle-grid" id="list-online"></div>
-        <div id="empty-online" class="hidden" style="text-align:center; padding:30px; color:#aaa">Nenhum veículo online.</div>
-    </div>
-    <div id="tab-critical" class="view-section">
-        <div style="background: rgba(231, 76, 60, 0.1); border: 1px solid var(--danger); color: var(--danger); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-            <strong>Atenção:</strong> Veículos que comunicaram hoje, mas apresentaram ERRO.
+        <div id="empty-online" class="hidden" style="text-align:center; padding:50px; color:var(--text-light)">
+            <h3>Nenhum veículo online encontrado.</h3>
         </div>
-        <table>
-            <thead><tr><th onclick="sortTable(0, 'list-critical')">Status</th><th onclick="sortTable(1, 'list-critical')">Prefixo</th><th>Erro Reportado</th><th>Horário</th></tr></thead>
-            <tbody id="list-critical"></tbody>
-        </table>
-        <div id="empty-critical" class="hidden" style="text-align:center; padding:30px; color:#aaa">Sem erros hoje! 👏</div>
     </div>
+
+    <div id="tab-critical" class="view-section">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th onclick="sortTable(0, 'list-critical')">Prefixo</th>
+                        <th>Status</th>
+                        <th>Erro Reportado</th>
+                        <th>Hora</th>
+                        <th>Versão</th>
+                    </tr>
+                </thead>
+                <tbody id="list-critical"></tbody>
+            </table>
+        </div>
+        <div id="empty-critical" class="hidden" style="text-align:center; padding:50px; color:var(--text-light)">
+            <h3>Nenhum erro reportado hoje! 👏</h3>
+        </div>
+    </div>
+
     <div id="tab-offline" class="view-section">
-        <table>
-            <thead><tr><th onclick="sortTable(0, 'list-offline')">Status</th><th onclick="sortTable(1, 'list-offline')">Prefixo</th><th>Última Comunicação</th><th>Tempo Inativo</th></tr></thead>
-            <tbody id="list-offline"></tbody>
-        </table>
-        <div id="empty-offline" class="hidden" style="text-align:center; padding:30px; color:#aaa">Todos os veículos comunicaram hoje!</div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th onclick="sortTable(0, 'list-offline')">Prefixo</th>
+                        <th>Status</th>
+                        <th>Última Comunicação</th>
+                        <th>Tempo Inativo</th>
+                    </tr>
+                </thead>
+                <tbody id="list-offline"></tbody>
+            </table>
+        </div>
+        <div id="empty-offline" class="hidden" style="text-align:center; padding:50px; color:var(--text-light)">
+            <h3>Toda a frota comunicou hoje!</h3>
+        </div>
     </div>
+
 </div>
+
 <div id="modalInfo" class="modal">
     <div class="modal-content">
-        <span class="close-modal" onclick="closeModal()">&times;</span>
-        <h2 id="m-title">Detalhes</h2>
-        <div id="m-body"></div>
+        <div class="modal-header">
+            <h2 id="m-title" style="margin:0">Detalhes</h2>
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body" id="m-body"></div>
     </div>
 </div>
+
 <script>
-    // Dados seguros via base64
+    // Dados injetados pelo Python (Base64)
     const FROTA = JSON.parse(atob("WyIyMDMwMDEiXQ=="));
     const METADATA = JSON.parse(atob("eyIyMDMwMDIiOiB7InNlcmllIjogIjY2MjM1LjAiLCAidmVyc2FvIjogIjkxLjEzIiwgImVvZCI6ICIyMTkuMCJ9LCAiMjAzMDAzIjogeyJzZXJpZSI6ICI2NjIzNS4wIiwgInZlcnNhbyI6ICI5MS4xMyIsICJlb2QiOiAiMjIxLjAifSwgIjIwMzAwMSI6IHsic2VyaWUiOiAiNjc3MDQuMCIsICJ2ZXJzYW8iOiAiOTEuMTMiLCAiZW9kIjogIjIyMS4wIn19"));
     const HISTORY = JSON.parse(atob("eyIyMDMwMDEiOiBbeyJkIjogIjIwMjYtMDItMjQgMDQ6NDg6MzEiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yNCAwNDoxODowMyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTI0IDAzOjQ3OjIwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjQgMDM6MTc6MDAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yNCAwMjo0NzowMCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTI0IDAyOjE2OjMzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjQgMDE6NDY6MDUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yNCAwMToxNjoxNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTI0IDAwOjQ2OjI3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjQgMDA6MTU6NTkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMyAyMzo0NTo1OSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTIzIDIzOjE1OjU4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjMgMjI6NDQ6MzEiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMyAyMjoxNToxOSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTIzIDEzOjQzOjM5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjMgMDQ6MzI6MjQiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMyAwNDowMzoxMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTIzIDAzOjMxOjU0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjMgMDM6MDE6MjciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMyAwMjozMjoyNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTIzIDAyOjAyOjAyIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjMgMDE6MzE6MzQiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMyAwMTowMTozMiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTIzIDAwOjMxOjA1IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjMgMDA6MDE6MDMiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMiAyMzozMDozNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTIyIDIzOjAwOjEwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjIgMjI6Mjk6MDciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMiAyMTo1OToxNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTIyIDEzOjQyOjM3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjIgMDQ6NTk6MzMiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMiAwNDoyOTowNiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTIyIDAzOjU4OjQwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjIgMDM6Mjg6NDAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMiAwMjo1ODo1MSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTIyIDAyOjI4OjUwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjIgMDE6NTc6MjQiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMiAwMToyNjo1NyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTIyIDAwOjU3OjU2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjIgMDA6MjY6MzAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMSAyMzo1NzoyOSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTIxIDIzOjI2OjE1IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjEgMjI6NTY6MjYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMSAyMjoyNjozNSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTIxIDIxOjU1OjE5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjEgMTM6NTI6MzIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMSAwNDo1NDoyMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTIxIDA0OjIzOjQyIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjEgMDM6NTM6MTQiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMSAwMzoyNDowMiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTIxIDAyOjUyOjQ2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjEgMDI6MjI6NDYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMSAwMTo1MjoxOCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTIxIDAxOjIyOjI4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjEgMDA6NTI6MDEiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMSAwMDoyMjowOSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTIwIDIzOjUxOjQyIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjAgMjM6MjE6MTkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMCAyMjo1MToyMCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTIwIDIyOjIxOjEzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjAgMTM6NDc6MjUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMCAwNTowMTowNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTIwIDA0OjMxOjE4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjAgMDQ6MDE6MjgiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMCAwMzozMTo0MCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTIwIDAzOjAxOjAzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjAgMDI6Mjk6NDgiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMCAwMTo1OTo1OSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTIwIDAxOjMwOjAwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMjAgMDE6MDA6MTMiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0yMCAwMDoyOTo0OCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE5IDIzOjU5OjQ2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTkgMjM6Mjk6MTkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xOSAyMjo1ODo1MyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE5IDIyOjI4OjMwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTkgMjI6MjY6NTIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xOSAxMzozODozMyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE5IDA0OjU0OjEwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTkgMDQ6MjU6MDkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xOSAwMzo1NDo0NyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE5IDAzOjIzOjE5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTkgMDI6NTQ6MTgiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xOSAwMjoyMzowMyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE5IDAxOjUyOjUzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTkgMDE6MjM6MDUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xOSAwMDo1MjozNiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE5IDAwOjIyOjQ3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTggMjM6NTE6MzAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xOCAyMzoyMjoyOSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE4IDIyOjUxOjE1IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTggMjI6MjE6MjUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xOCAxMzozODoxMiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE4IDA0OjU5OjIwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTggMDQ6Mjk6MDciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xOCAwMzo1OToxOCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE4IDAzOjI4OjUwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTggMDI6NTk6MDAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xOCAwMjoyODoyOCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE4IDAxOjU4OjE1IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTggMDE6Mjg6MjYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xOCAwMDo1NzowMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE4IDAwOjI3OjU5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTcgMjM6NTY6NDIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xNyAyMzoyNjoxNSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE3IDIyOjU2OjI1IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTcgMjI6MjY6MzYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xNyAxMzo0NzozMiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE3IDA1OjAxOjE0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTcgMDQ6MzA6MzciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xNyAwNDowMDo0NyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE3IDAzOjMwOjU5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTcgMDI6NTk6NDIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xNyAwMjoyOToxNiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE3IDAxOjU5OjI2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTcgMDE6Mjk6MzgiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xNyAwMDo1OTo1MCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE3IDAwOjI4OjM2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTYgMjM6NTg6MzYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xNiAyMzoyODowOSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE2IDIyOjU4OjQxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTYgMjI6Mjg6MTIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xNiAxMzo0NTowOSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE2IDA0OjU4OjIzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTYgMDQ6Mjg6MDYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xNiAwMzo1Nzo0OSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE2IDAzOjI3OjMzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTYgMDI6NTc6MTciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xNiAwMjoyNzowMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE2IDAxOjU2OjQ0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTYgMDE6MjY6MjgiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xNiAwMDo1NjoxMiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE2IDAwOjI1OjU1IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTUgMjM6NTU6MzkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xNSAyMzoyNToyMyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE1IDIyOjUzOjU3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTUgMjI6MjQ6NTciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xNSAxMzo0NjowMCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE1IDA1OjAwOjU2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTUgMDQ6MzE6MDciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xNSAwMzo1OTo0MSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE1IDAzOjI5OjUxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTUgMDM6MDA6MTIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xNSAwMjoyOTo1MiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE1IDAxOjU4OjI1IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTUgMDE6Mjg6MzciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xNSAwMDo1ODoxMCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE1IDAwOjI4OjIyIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTQgMjM6NTc6MzgiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xNCAyMzoyNzo1MCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE0IDIyOjU4OjExIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTQgMjI6Mjc6MzciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xNCAxMzo0OToxNSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE0IDA0OjQxOjAzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTQgMDQ6MDk6NDgiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xNCAwMzozOTo0OCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE0IDAzOjA5OjQ3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTQgMDI6Mzk6NDkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xNCAwMjowOToyMiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE0IDAxOjM4OjA2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTQgMDE6MDg6MTYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xNCAwMDozODoxNiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTE0IDAwOjA2OjQ5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTMgMjM6Mzc6MzMiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xMyAyMzowNzo0NCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTEzIDIyOjM3OjA5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTMgMTM6NTU6MzMiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xMyAwNToxMToyMiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTEzIDA0OjQwOjA3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTMgMDQ6MDk6MzkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xMyAwMzozOTo0OSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTEzIDAzOjA5OjIxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTMgMDI6Mzg6NTQiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xMyAwMjowOTowNSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTEzIDAxOjM3OjQ4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTMgMDE6MDc6NTgiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xMyAwMDozNzozMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTEzIDAwOjA3OjQxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTIgMjM6Mzc6MzkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xMiAyMzowNzoxMyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTEyIDIyOjM3OjI3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTIgMjI6MzY6MTAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xMiAxMzo1NDo1OCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTEyIDA1OjEwOjE2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTIgMDQ6NDA6MDAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xMiAwNDowOTowNiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTEyIDAzOjM4OjQzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTIgMDM6MDg6NDMiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xMiAwMjozODoxNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTEyIDAyOjA4OjI4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTIgMDE6Mzg6MDEiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xMiAwMTowNzo1MSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTEyIDAwOjM3OjI5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTIgMDA6MDY6MDQiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xMSAyMzozNzowMyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTExIDIzOjA2OjM2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTEgMjI6MzY6MTAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xMSAxMzo1NzoyMiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTExIDA1OjAzOjQzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTEgMDQ6MzM6NTciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xMSAwNDowMzoyMiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTExIDAzOjMzOjM2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTEgMDM6MDM6MTciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xMSAwMjozMzoyMCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTExIDAyOjAyOjU1IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTEgMDE6MzI6MzAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xMSAwMTowMjo0MyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTExIDAwOjMyOjQ3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTEgMDA6MDI6MjQiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xMCAyMzozMjoyNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTEwIDIzOjAxOjA0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTAgMjI6MzE6NTkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xMCAxMzo1OTozMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTEwIDA0OjM5OjQ5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTAgMDQ6MTA6MDIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xMCAwMzozOTo1MyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTEwIDAzOjA4OjM5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTAgMDI6Mzg6NDIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xMCAwMjowODoxNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTEwIDAxOjM3OjU0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMTAgMDE6MDc6MjUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0xMCAwMDozODo0NCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTEwIDAwOjA3OjMwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDkgMjM6Mzc6MzQiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wOSAyMzowNzo0NyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA5IDIyOjM2OjM2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDkgMTM6NTE6NTEiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wOSAwNTowOTo1NiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA5IDA0OjQxOjAxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDkgMDQ6MDk6MzciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wOSAwMzo0MDozOSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA5IDAzOjA5OjAzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDkgMDI6Mzk6MTciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wOSAwMjowOToyMCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA5IDAxOjM5OjI0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDkgMDE6MDk6MDAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wOSAwMDozODozNSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA5IDAwOjA4OjEwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDggMjM6Mzc6NDYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wOCAyMzowNzo1MCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA4IDIyOjM3OjE1IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDggMTM6NTY6MTkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wOCAwNDo1Njo1MCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA4IDA0OjI2OjUzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDggMDM6NTc6MDciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wOCAwMzoyNTo1NCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA4IDAyOjU1OjMwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDggMDI6MjY6MzMiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wOCAwMTo1NToxMCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA4IDAxOjI0OjQ1IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDggMDA6NTU6NDciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wOCAwMDoyNDozNCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA3IDIzOjU0OjEwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDcgMjM6MjQ6MTQiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNyAyMjo1NDoyNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA3IDIyOjI0OjAzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDcgMTM6Mzc6NDIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNyAwNTo1MjowMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA3IDA1OjIyOjE0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDcgMDQ6NTI6MjkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNyAwNDoyMjoyMCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA3IDAzOjUxOjU5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDcgMDM6MjI6MDAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNyAwMjo1MTozNSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA3IDAyOjIxOjExIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDcgMDE6NTA6MzciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNyAwMToyMDoxMiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA3IDAwOjUwOjI1IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDcgMDA6MjA6MzciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNiAyMzo1MDoxMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA2IDIzOjE4OjU4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDYgMjI6NDk6MTIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNiAyMjoxOTozNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA2IDIxOjQ4OjU5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDYgMjE6MTk6MTIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNiAyMDo0OToxNCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA2IDIwOjE4OjAxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDYgMTk6NDk6NDEiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNiAxOToxODowNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA2IDE4OjQ5OjE0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDYgMTg6MTc6NTIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNiAxNzo0Nzo1NCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA2IDE3OjE3OjU3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDYgMTY6NDc6NDUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNiAxNjoxNzozMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA2IDE1OjQ3OjE2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDYgMTU6MTc6MDIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNiAxNDo0NjoxNSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA2IDE0OjE2OjA1IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDYgMTM6NDY6MTkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNiAxMzoxNjoyOCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA2IDEyOjQ2OjE0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDYgMTI6MTY6MDAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNiAxMTo0NTozNiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA2IDExOjE1OjEyIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDYgMTA6NDU6MjUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNiAxMDoxNTowMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA2IDA5OjQzOjQ5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDYgMDk6MTM6MjUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNiAwODo0MzoxNiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA2IDA4OjEzOjI4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDYgMDc6NDM6NDAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNiAwNzoxMjoyOCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA2IDA2OjQyOjMwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDYgMDY6MTM6MjEiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNiAwNTo0MDo0MiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA2IDA1OjEwOjU1IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDYgMDQ6NDE6MDkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNiAwNDoxMToxMiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA2IDAzOjM5OjQ3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDYgMDM6MTA6NTAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNiAwMjo0MDoxNSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA2IDAyOjA5OjQ0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDYgMDE6Mzk6MzYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNiAwMTowOToxMiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA2IDAwOjM4OjIzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDYgMDA6MDg6MTIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNSAyMzozODoyNSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA1IDIzOjA4OjM5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDUgMjI6Mzc6MjYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNSAyMjowNzo0MCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA1IDIxOjM3OjE2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDUgMjE6MDY6NTEiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNSAyMDozNzowNCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA1IDIwOjA2OjE4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDUgMTk6Mzc6MTYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNSAxOTowNzowMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA1IDE4OjM2OjQ3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDUgMTg6MDY6MzQiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNSAxNzozNjoyMCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA1IDE3OjA1OjUxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDUgMTY6MzU6MjciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNSAxNjowNTozOSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA1IDE1OjM2OjA0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDUgMTU6MDY6MTciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNSAxNDozNTo1MyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA1IDE0OjA1OjU1IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDUgMTM6MzU6MzEiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNSAxMzowNDoyNSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA1IDEyOjM0OjExIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDUgMTI6MDM6NTciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNSAxMTozMzo0MyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA1IDExOjAzOjI5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDUgMTA6MzM6NDIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNSAxMDowMzoxOCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA1IDA5OjMyOjUzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDUgMDk6MDM6MzQiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNSAwODozMjowMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA1IDA4OjAyOjE0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDUgMDc6MzI6MjciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNSAwNzowMjo0MSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA1IDA2OjMxOjI4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDUgMDY6MDE6NDIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNSAwNTozMDoxNCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA1IDA1OjAwOjE2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDUgMDQ6Mjk6MDMiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNSAwNDowMDowNiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA1IDAzOjI4OjUyIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDUgMDI6NTg6MjkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNSAwMjoyODozMiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA1IDAxOjU4OjA3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDUgMDE6Mjg6MjEiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNSAwMDo1Nzo1NiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA1IDAwOjI4OjAxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDQgMjM6NTg6MTQiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNCAyMzoyNzo0OSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA0IDIyOjU3OjUzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDQgMjI6Mjc6MjkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNCAyMTo1NzowNiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA0IDIxOjI1OjUzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDQgMjA6NTY6NTUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNCAyMDoyNjozMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA0IDE5OjU1OjE4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDQgMTk6MjU6NDgiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNCAxODo1NToxOCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA0IDE4OjI1OjA5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDQgMTc6NTU6MjMiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNCAxNzoyNDowOSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA0IDE2OjU0OjM5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDQgMTY6MjM6MjYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNCAxNTo1NDoyOCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA0IDE1OjI0OjA0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDQgMTQ6NTM6MjkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNCAxNDoyMzo0MSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA0IDEzOjUzOjE3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDQgMTM6MjM6MTkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNCAxMjo1MjowNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA0IDEyOjIyOjQ3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDQgMTE6NTI6MzkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNCAxMToyMToyNSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA0IDEwOjUxOjI5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDQgMTA6MjE6MzMiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNCAwOTo1MTozNiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA0IDA5OjIwOjEyIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDQgMDg6NTA6MjciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNCAwODoyMDowMiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA0IDA3OjUwOjE2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDQgMDc6MjA6MzAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNCAwNjo1MDowNiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA0IDA2OjE4OjUzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDQgMDU6NDk6MDYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNCAwNToxODo0MiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA0IDA0OjQ4OjU3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDQgMDQ6MTg6MzMiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNCAwMzo0ODo0NiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA0IDAzOjE3OjM0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDQgMDI6NDg6MzYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNCAwMjoxNzoyMyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA0IDAxOjQ3OjM2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDQgMDE6MTc6MDEiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wNCAwMDo0NzoxNiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTA0IDAwOjE2OjQ4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDMgMjM6NDY6MzkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMyAyMzoxNjo1MyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAzIDIyOjQ2OjI5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDMgMjI6MTQ6NDMiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMyAyMTo0NDowMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAzIDIxOjEzOjQxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDMgMjA6NDM6NDMiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMyAyMDoxMzoxOSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAzIDE5OjQzOjExIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDMgMTk6MTM6MjQiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMyAxODo0MzozNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAzIDE4OjEzOjAyIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDMgMTc6NDM6MTUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMyAxNzoxNDoxNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAzIDE2OjQyOjE1IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDMgMTY6MTI6MzAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMyAxNTo0MToxNiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAzIDE1OjExOjMwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDMgMTQ6NDE6MDUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMyAxNDoxMDo1NyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAzIDEzOjQxOjEwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDMgMTM6MDk6NTgiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMyAxMjo0MDo0OSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAzIDEyOjA5OjM1IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDMgMTE6Mzk6NDgiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMyAxMTowOTo1MCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAzIDEwOjM5OjI2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDMgMTA6MDk6MzkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMyAwOTozOTo1MyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAzIDA5OjA5OjM2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDMgMDg6Mzk6MzkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMyAwODowOTowNSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAzIDA3OjM5OjE5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDMgMDc6MDg6MDUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMyAwNjozODowNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAzIDA2OjA4OjEwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDMgMDU6Mzg6MjciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMyAwNTowODoyMCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAzIDA0OjM3OjA5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDMgMDQ6MDc6MDIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMyAwMzozNzoxNiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAzIDAzOjA2OjUxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDMgMDI6Mzc6MDUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMyAwMjowNjo0MSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAzIDAxOjM2OjIzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDMgMDE6MDY6MjYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMyAwMDozNjowMiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAzIDAwOjA0OjUwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDIgMjM6MzU6MDUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMiAyMzowNDo0MCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAyIDIyOjM0OjE3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDIgMjI6MDQ6MTQiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMiAyMTozNDozNSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAyIDIxOjA0OjIxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDIgMjA6MzQ6MDciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMiAyMDowMzo1MyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAyIDE5OjMzOjQwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDIgMTk6MDM6MjUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMiAxODozMzozOCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAyIDE4OjAyOjMwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDIgMTc6MzM6MTAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMiAxNzowMTo0NCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAyIDE2OjMxOjU4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDIgMTY6MDI6MDEiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMiAxNTozMjoxNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAyIDE1OjAxOjUyIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDIgMTQ6MzA6NDAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMiAxNDowMDoxMCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAyIDEzOjMwOjAxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDIgMTM6MDA6MTUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMiAxMjoyOTo1MCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAyIDExOjU4OjI3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDIgMTE6Mjk6MDciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMiAxMDo1OTowMCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAyIDEwOjI5OjE0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDIgMDk6NTk6MDYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMiAwOToyNzo1NCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAyIDA4OjU4OjA2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDIgMDg6Mjc6NDciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMiAwNzo1Nzo0OCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAyIDA3OjI4OjAzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDIgMDY6NTc6MzgiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMiAwNjoyNzoxNCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAyIDA1OjU2OjUwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDIgMDU6Mjc6MDMiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMiAwNDo1NTo0OSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAyIDA0OjI2OjUxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDIgMDM6NTU6MzgiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMiAwMzoyNToxNCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAyIDAyOjU1OjE2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDIgMDI6MjU6MTkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMiAwMTo1NTozMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAyIDAxOjI1OjA3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDIgMDA6NTM6NTQiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMiAwMDoyNDowNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAxIDIzOjU0OjIxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDEgMjM6MjM6NTciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMSAyMjo1MzoxMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAxIDIyOjIzOjAyIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDEgMjE6NTM6MTQiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMSAyMToyMjoyOCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAxIDIwOjUyOjIxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDEgMjA6MjI6MzUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMSAxOTo1MjoxMiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAxIDE5OjIyOjEzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDEgMTg6NTE6MzciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMSAxODoyMTo1MCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAxIDE3OjUyOjAzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDEgMTc6MjI6MTUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMSAxNjo1MDoyMCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAxIDE2OjIwOjM0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDEgMTU6NTA6NDciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMSAxNToyMDoxNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAxIDE0OjUwOjA4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDEgMTQ6MjA6MjEiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMSAxMzo0OTo1OCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAxIDEzOjE5OjMzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDEgMTI6NDg6NTciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMSAxMjoxOToxMCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAxIDExOjQ5OjExIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDEgMTE6MTc6NTgiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMSAxMDo0ODozOCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAxIDEwOjE4OjI4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDEgMDk6NDc6MTUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMSAwOToxNzoyOCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAxIDA4OjQ3OjMwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDEgMDg6MTc6MDUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMSAwNzo0NjoyOSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAxIDA3OjE2OjA0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDEgMDY6NDY6MDYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMSAwNjoxNTo0MSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAxIDA1OjQ1OjUxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDEgMDU6MTU6MjciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMSAwNDo0NTowMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAxIDA0OjE0OjU2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDEgMDM6NDU6MTAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMSAwMzoxNDo0NyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAxIDAyOjQ0OjIzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDEgMDI6MTM6NTkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMSAwMTo0MzozNCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAyLTAxIDAxOjEzOjM2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDItMDEgMDA6NDM6MTEiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMi0wMSAwMDoxMzoxNiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMxIDIzOjQyOjUzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzEgMjM6MTI6MjgiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMSAyMjo0MjoxOCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMxIDIyOjEyOjI5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzEgMjE6NDE6NTYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMSAyMToxMTozMyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMxIDIwOjQxOjQ2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzEgMjA6MTE6NDkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMSAxOTo0MDozNiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMxIDE5OjEwOjAxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzEgMTg6NDA6MTUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMSAxODowOTo1MCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMxIDE3OjQwOjIyIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzEgMTc6MDk6NTAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMSAxNjozOTo0MSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMxIDE2OjA5OjUzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzEgMTU6Mzg6NDAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMSAxNTowODo1NCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMxIDE0OjM4OjI5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzEgMTQ6MDg6MDUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMSAxMzozODoxOCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMxIDEzOjA3OjU0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzEgMTI6Mzg6MDciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMSAxMjowNzozMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMxIDExOjM3OjQ0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzEgMTE6MDc6MDkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMSAxMDozNzoyMyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMxIDEwOjA2OjA5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzEgMDk6MzU6NDQiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMSAwOTowNTo1NyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMxIDA4OjM2OjA5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzEgMDg6MDQ6NTciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMSAwNzozNDo0NyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMxIDA3OjA0OjI4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzEgMDY6MzQ6MzEiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMSAwNjowNDowNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMxIDA1OjM0OjE5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzEgMDU6MTk6MTIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMSAwNDo0OToxNSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMxIDA0OjE4OjUwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzEgMDM6NDk6MDQiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMSAwMzoxOToxNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMxIDAyOjQ4OjA1IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzEgMDI6MTg6MDciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMSAwMTo0ODoxMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMxIDAxOjE4OjIzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzEgMDA6NDc6NTkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMSAwMDoxODowMiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMwIDIzOjQ4OjA1IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzAgMjM6MTY6NTkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMCAyMjo0NzozNiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMwIDIyOjE3OjEwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzAgMjE6NDY6MjciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMCAyMToxNjoxOSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMwIDIwOjQ2OjMzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzAgMjA6MTY6MDQiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMCAxOTo0NTo1NSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMwIDE5OjE2OjA5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzAgMTg6NDQ6NTUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMCAxODoxNDozMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMwIDE3OjQ0OjIxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzAgMTc6MTQ6MzkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMCAxNjo0NDo0MSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMwIDE2OjE0OjQyIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzAgMTU6NDM6MTgiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMCAxNToxNDoyMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMwIDE0OjQzOjA4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzAgMTQ6MTI6MzIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMCAxMzo0Mjo0MyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMwIDEzOjEyOjQ2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzAgMTI6NDI6MjIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMCAxMjoxMTo1OCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMwIDExOjQyOjEyIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzAgMTE6MTE6NDkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMCAxMDo0MDo1MyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMwIDEwOjExOjUyIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzAgMDk6NDE6NDQiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMCAwOToxMDozMSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMwIDA4OjM5OjU2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzAgMDg6MTA6MTAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMCAwNzo0MDoxNCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMwIDA3OjA5OjQ5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzAgMDY6NDA6MDIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMCAwNjowOTozOCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMwIDA1OjM5OjUxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzAgMDU6MDk6MTciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMCAwNDozODowNSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMwIDA0OjA4OjA3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzAgMDM6Mzc6NDMiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMCAwMzowODozMyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMwIDAyOjM3OjIxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzAgMDI6MDc6MTIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMCAwMTozNzoyNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTMwIDAxOjA3OjQxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMzAgMDA6MzY6MTYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0zMCAwMDowNzoxOCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI5IDIzOjM2OjA3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjkgMjM6MDU6NDIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yOSAyMjozNjo0NCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI5IDIyOjA2OjIwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjkgMjE6MzU6NTciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yOSAxMzo1Mjo0MyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI5IDA0OjU1OjMwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjkgMDQ6MjQ6NTMiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yOSAwMzo1NTowNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI5IDAzOjI1OjAwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjkgMDI6NTM6NDkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yOSAwMjoyNDowMiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI5IDAxOjUzOjI3IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjkgMDE6MjM6NDEiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yOSAwMDo1MzozMiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI5IDAwOjIzOjQ2IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjggMjM6NTM6MjEiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yOCAyMzoyMTo1OCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI4IDIyOjUyOjAwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjggMjI6MjE6MzgiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yOCAxMzo0OToxNCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI4IDA0OjQ3OjA1IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjggMDQ6MTc6MTkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yOCAwMzo0NTo1NiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI4IDAzOjE1OjU4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjggMDI6NDU6MzMiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yOCAwMjoxNjozNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI4IDAxOjQ1OjUwIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjggMDE6MTU6NDEiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yOCAwMDo0NTo1MiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI4IDAwOjE0OjM4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjcgMjM6NDQ6MTgiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yNyAyMzoxNDozMyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI3IDIyOjQ0OjA4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjcgMjI6MTU6MDIiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yNyAyMTo0NDo0OCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI3IDE0OjA2OjM4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjcgMDU6MTQ6NDAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yNyAwNDo0NDoxNiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI3IDA0OjE0OjU5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjcgMDM6NDQ6NTYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yNyAwMzoxMzo0NSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI3IDAyOjQzOjQ5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjcgMDI6MTM6MjUiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yNyAwMTo0MzozMCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI3IDAxOjEzOjQ0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjcgMDA6NDM6MjEiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yNyAwMDoxMzozNSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI2IDIzOjQyOjI0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjYgMjM6MTI6MjgiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yNiAyMjo0MjowNSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI2IDIyOjEyOjU4IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjYgMjE6NDE6NDYiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yNiAyMToxMToyNyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI2IDEzOjU3OjUyIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjYgMDQ6NDA6MjkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yNiAwNDoxMDoxNCIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI2IDAzOjQwOjAxIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjYgMDM6MDk6NDciLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yNiAwMjozOTozMyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI2IDAyOjEwOjAzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjYgMDE6Mzk6NDkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yNiAwMTowOTozNSIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI2IDAwOjM5OjE5IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjYgMDA6MzY6MDEiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yNiAwMDowNTo0NyIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI1IDIzOjM1OjM0IiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjUgMjM6MDU6MjAiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yNSAyMjozNTowNiIsICJlIjogbnVsbH0sIHsiZCI6ICIyMDI2LTAxLTI1IDIyOjA0OjUzIiwgImUiOiBudWxsfSwgeyJkIjogIjIwMjYtMDEtMjUgMjE6MzQ6MzkiLCAiZSI6IG51bGx9LCB7ImQiOiAiMjAyNi0wMS0yNSAxMzo1MjoxNiIsICJlIjogbnVsbH1dfQ=="));
@@ -113,6 +244,15 @@
     const metaFilter = document.getElementById('metaFilter');
     let chartTrend = null;
     let chartStatus = null;
+    
+    // Auto refresh
+    let timeLeft = 300;
+    const refreshBar = document.getElementById('refresh-bar');
+    setInterval(() => {
+        timeLeft--;
+        if(timeLeft <= 0) location.reload();
+        refreshBar.style.width = ((300 - timeLeft) / 300 * 100) + '%';
+    }, 1000);
 
     function init() {
         datePicker.addEventListener('change', renderDashboard);
@@ -122,17 +262,18 @@
     }
 
     function toggleTheme() {
-        const current = document.body.getAttribute('data-theme');
-        document.body.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+        const body = document.body;
+        const current = body.getAttribute('data-theme');
+        body.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
     }
 
     function switchTab(id) {
         document.querySelectorAll('.view-section').forEach(e => e.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active'));
+        document.querySelectorAll('.tab-item').forEach(e => e.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         
-        const btnMap = {'tab-online':0, 'tab-critical':1, 'tab-offline':2};
-        if(btnMap[id] !== undefined) document.querySelectorAll('.tab-btn')[btnMap[id]].classList.add('active');
+        const index = id === 'tab-online' ? 0 : id === 'tab-critical' ? 1 : 2;
+        document.querySelectorAll('.tab-item')[index].classList.add('active');
     }
 
     function getLatestEodVersion() {
@@ -148,15 +289,13 @@
         const dates = [];
         const parts = startDateStr.split('-');
         const baseDate = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
-        
         for (let i = 0; i < daysBack; i++) {
             const d = new Date(baseDate);
             d.setDate(baseDate.getDate() - i);
-            
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
             const day = String(d.getDate()).padStart(2, '0');
-            dates.push(`${year}-${month}-${day}`);
+            dates.push(`${y}-${m}-${day}`);
         }
         return dates;
     }
@@ -170,33 +309,32 @@
         };
         Object.values(lists).forEach(l => l.innerHTML = '');
 
-        let counts = { online: 0, offline: 0, critical: 0 };
+        let counts = { online: 0, offline: 0, critical: 0, total: 0 };
         const maxEod = getLatestEodVersion();
-
         const selParts = selectedDateStr.split('-');
         const dateEndObj = new Date(parseInt(selParts[0]), parseInt(selParts[1])-1, parseInt(selParts[2]), 23, 59, 59);
         const dateStartObj = new Date(parseInt(selParts[0]), parseInt(selParts[1])-1, parseInt(selParts[2]), 0, 0, 0);
 
         FROTA.forEach(veiculo => {
+            counts.total++;
             const logs = HISTORY[veiculo] || [];
             let lastLog = null;
 
             for (let log of logs) { 
                 const logDate = new Date(log.d.replace(' ', 'T'));
-                if (logDate <= dateEndObj) { 
-                    lastLog = log; 
-                    break; 
-                } 
+                if (logDate <= dateEndObj) { lastLog = log; break; } 
             }
 
             const meta = METADATA[veiculo] || {};
             const eodVal = parseFloat(meta.eod) || 0;
             const isOutdated = eodVal < maxEod;
-            const rowAttr = `data-prefix="${veiculo}" data-outdated="${isOutdated}"`;
+            
+            const searchData = `${veiculo} ${meta.versao} ${meta.eod} ${lastLog ? lastLog.e : ''}`.toLowerCase();
+            const rowAttr = `data-search="${searchData}" data-outdated="${isOutdated}" data-error="${lastLog && lastLog.e ? 'true' : 'false'}"`;
 
             if (!lastLog) {
                 counts.offline++;
-                const row = `<tr ${rowAttr}><td><span class="status-badge badge-offline">SEM DADOS</span></td><td><strong>${escapeHtml(veiculo)}</strong></td><td>Nunca</td><td>-</td></tr>`;
+                const row = `<tr ${rowAttr}><td><strong>${veiculo}</strong></td><td><span class="badge badge-offline">SEM DADOS</span></td><td>Nunca</td><td>-</td></tr>`;
                 lists.offline.insertAdjacentHTML('beforeend', row);
                 return;
             }
@@ -207,41 +345,77 @@
             if (isToday) {
                 if (lastLog.e) {
                     counts.critical++;
-                    const row = `<tr ${rowAttr} onclick="showDetails('${escapeHtml(veiculo)}')"><td><span class="status-badge badge-critical">ERRO</span></td><td><strong>${escapeHtml(veiculo)}</strong></td><td style="color:var(--danger)">${escapeHtml(lastLog.e)}</td><td>${escapeHtml(lastLog.d.split(' ')[1])}</td></tr>`;
+                    const row = `<tr ${rowAttr} onclick="showDetails('${veiculo}')" style="cursor:pointer">
+                        <td><strong>${veiculo}</strong></td>
+                        <td><span class="badge badge-error">ERRO</span></td>
+                        <td class="text-danger">${escapeHtml(lastLog.e)}</td>
+                        <td>${lastLog.d.split(' ')[1]}</td>
+                        <td><small>${meta.versao || '-'}</small></td>
+                    </tr>`;
                     lists.critical.insertAdjacentHTML('beforeend', row);
                 } else {
                     counts.online++;
-                    const div = `<div class="v-card" ${rowAttr} onclick="showDetails('${escapeHtml(veiculo)}')"><div class="v-prefix">${escapeHtml(veiculo)}</div><span class="v-sub">🕒 ${escapeHtml(lastLog.d.split(' ')[1])}</span></div>`;
+                    const cardClass = isOutdated ? 'v-card outdated' : 'v-card';
+                    const div = `
+                    <div class="${cardClass}" ${rowAttr} onclick="showDetails('${veiculo}')">
+                        <div class="v-header">
+                            <span class="v-id">${veiculo}</span>
+                            <span style="color:var(--success)">●</span>
+                        </div>
+                        <div class="v-time">🕒 ${lastLog.d.split(' ')[1]}</div>
+                        <div class="v-meta">v${meta.versao || '?'} | EOD ${meta.eod || '?'}</div>
+                    </div>`;
                     lists.online.insertAdjacentHTML('beforeend', div);
                 }
             } else {
                 counts.offline++;
-                const oneDay = 24 * 60 * 60 * 1000;
+                const oneDay = 86400000;
                 const d1 = new Date(dateStartObj.getFullYear(), dateStartObj.getMonth(), dateStartObj.getDate());
                 const d2 = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate());
                 const diffDays = Math.round(Math.abs((d1 - d2) / oneDay));
                 
-                const row = `<tr ${rowAttr} onclick="showDetails('${escapeHtml(veiculo)}')"><td><span class="status-badge badge-offline">OFFLINE</span></td><td><strong>${escapeHtml(veiculo)}</strong></td><td>${escapeHtml(formatDateBr(lastLog.d))}</td><td>${escapeHtml(diffDays.toString())} dia(s) atrás</td></tr>`;
+                const row = `<tr ${rowAttr} onclick="showDetails('${veiculo}')" style="cursor:pointer">
+                    <td><strong>${veiculo}</strong></td>
+                    <td><span class="badge badge-offline">OFFLINE</span></td>
+                    <td>${formatDateBr(lastLog.d)}</td>
+                    <td>${diffDays} dia(s)</td>
+                </tr>`;
                 lists.offline.insertAdjacentHTML('beforeend', row);
             }
         });
 
-        updateCounters(counts);
+        updateKPIs(counts);
         applyFilters(); 
-        renderCharts(selectedDateStr);
+        renderCharts(selectedDateStr, counts);
+    }
+
+    function updateKPIs(counts) {
+        document.getElementById('kpi-online').innerText = counts.online;
+        document.getElementById('kpi-offline').innerText = counts.offline;
+        document.getElementById('kpi-critical').innerText = counts.critical;
+        
+        const active = counts.online + counts.critical;
+        const rate = active > 0 ? ((counts.online / active) * 100).toFixed(1) : 0;
+        document.getElementById('kpi-rate').innerText = rate + '%';
+
+        document.getElementById('empty-online').classList.toggle('hidden', counts.online > 0);
+        document.getElementById('empty-offline').classList.toggle('hidden', counts.offline > 0);
+        document.getElementById('empty-critical').classList.toggle('hidden', counts.critical > 0);
     }
 
     function applyFilters() {
-        const term = searchInput.value.toUpperCase();
+        const term = searchInput.value.toLowerCase();
         const filterType = metaFilter.value;
 
         const filterItem = (el) => {
-            const prefix = el.getAttribute('data-prefix').toUpperCase();
+            const searchData = el.getAttribute('data-search');
             const outdated = el.getAttribute('data-outdated') === 'true';
-            let show = true;
+            const hasError = el.getAttribute('data-error') === 'true';
             
-            if (term && prefix.indexOf(term) === -1) show = false;
+            let show = true;
+            if (term && searchData.indexOf(term) === -1) show = false;
             if (filterType === 'old_eod' && !outdated) show = false;
+            if (filterType === 'has_error' && !hasError) show = false;
             
             el.style.display = show ? '' : 'none';
         };
@@ -250,30 +424,28 @@
         document.querySelectorAll('tbody tr').forEach(filterItem);
     }
 
-    function updateCounters(counts) {
-        document.getElementById('cnt-online').innerText = counts.online;
-        document.getElementById('cnt-offline').innerText = counts.offline;
-        document.getElementById('cnt-critical').innerText = counts.critical;
-        
-        document.getElementById('empty-online').style.display = counts.online === 0 ? 'block' : 'none';
-        document.getElementById('empty-offline').style.display = counts.offline === 0 ? 'block' : 'none';
-        document.getElementById('empty-critical').style.display = counts.critical === 0 ? 'block' : 'none';
-    }
-
-    function renderCharts(dateStr) {
-        const onl = parseInt(document.getElementById('cnt-online').innerText);
-        const crit = parseInt(document.getElementById('cnt-critical').innerText);
-        const off = parseInt(document.getElementById('cnt-offline').innerText);
-        
+    function renderCharts(dateStr, counts) {
         const ctxStatus = document.getElementById('statusChart').getContext('2d');
         if(chartStatus) chartStatus.destroy();
+        
+        const isDark = document.body.getAttribute('data-theme') === 'dark';
+        const textColor = isDark ? '#cbd5e1' : '#334155';
+
         chartStatus = new Chart(ctxStatus, {
             type: 'doughnut',
             data: { 
-                labels: ['Online', 'Erro/Crítico', 'Offline'], 
-                datasets: [{ data: [onl, crit, off], backgroundColor: ['#27ae60', '#c0392b', '#f39c12'] }] 
+                labels: ['Online', 'Erro', 'Offline'], 
+                datasets: [{ 
+                    data: [counts.online, counts.critical, counts.offline], 
+                    backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
+                    borderWidth: 0
+                }] 
             },
-            options: { maintainAspectRatio: false, plugins: { title: { display: true, text: 'Status Atual' } } }
+            options: { 
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { color: textColor } } } 
+            }
         });
 
         const dateList = getDatesInRange(dateStr, 30);
@@ -292,10 +464,8 @@
             FROTA.forEach(v => {
                 const logs = HISTORY[v] || [];
                 const log = logs.find(l => l.d.startsWith(isoDate));
-                
                 if(log) {
-                    if(log.e) dayError++;
-                    else dayOnline++;
+                    if(log.e) dayError++; else dayOnline++;
                 }
             });
             dataOnline.push(dayOnline);
@@ -303,23 +473,65 @@
         }
 
         const ctxTrend = document.getElementById('trendChart').getContext('2d');
-        if(chartTrend) chartStatus.destroy();
+        if(chartTrend) chartTrend.destroy();
         chartTrend = new Chart(ctxTrend, {
             type: 'line',
             data: { 
                 labels: labels, 
                 datasets: [ 
-                    { label: 'Online (Sucesso)', data: dataOnline, borderColor: '#27ae60', tension: 0.1, fill: false }, 
-                    { label: 'Com Erro', data: dataErrors, borderColor: '#c0392b', tension: 0.1, fill: false } 
+                    { label: 'Sucesso', data: dataOnline, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.3, fill: true, pointRadius: 2 }, 
+                    { label: 'Erros', data: dataErrors, borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', tension: 0.3, fill: true, pointRadius: 2 } 
                 ] 
             },
             options: { 
-                maintainAspectRatio: false, 
+                responsive: true,
+                maintainAspectRatio: false,
                 interaction: { mode: 'index', intersect: false }, 
-                plugins: { title: { display: true, text: 'Comunicações nos últimos 30 dias' } }, 
-                scales: { y: { beginAtZero: true } } 
+                plugins: { legend: { labels: { color: textColor } } }, 
+                scales: { 
+                    y: { beginAtZero: true, grid: { color: isDark ? '#334155' : '#e2e8f0' }, ticks: { color: textColor } },
+                    x: { grid: { display: false }, ticks: { color: textColor } }
+                } 
             }
         });
+    }
+
+    function exportData() {
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Prefixo;Status;Data;Hora;Erro;Versao;EOD\n";
+        
+        FROTA.forEach(veiculo => {
+            const meta = METADATA[veiculo] || {};
+            const logs = HISTORY[veiculo] || [];
+            const lastLog = logs[0]; 
+            
+            let status = "OFFLINE";
+            let erro = "";
+            let data = "";
+            let hora = "";
+
+            if (lastLog) {
+                const d = lastLog.d.split(' ');
+                data = d[0];
+                hora = d[1];
+                if (lastLog.e) {
+                    status = "ERRO";
+                    erro = lastLog.e.replace(/;/g, ",");
+                } else {
+                    status = "ONLINE";
+                }
+            }
+
+            csvContent += `${veiculo};${status};${data};${hora};${erro};${meta.versao || ''};${meta.eod || ''}\n`;
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `relatorio_frota_${datePicker.value}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
     function sortTable(n, tableId) {
@@ -329,7 +541,7 @@
         while (switching) {
             switching = false;
             rows = table.rows;
-            for (i = 1; i < (rows.length - 1); i++) {
+            for (i = 0; i < (rows.length - 1); i++) {
                 shouldSwitch = false;
                 x = rows[i].getElementsByTagName("TD")[n]; 
                 y = rows[i + 1].getElementsByTagName("TD")[n];
@@ -356,12 +568,7 @@
 
     function escapeHtml(text) {
         if (!text) return '';
-        return text
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
+        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
     const modal = document.getElementById('modalInfo');
@@ -371,23 +578,34 @@
         const logs = HISTORY[veiculo] || [];
         const last = logs[0] || {d:'N/A'};
         
-        let erroHtml = last.e ? `<p style="color:red"><strong>⚠️ Erro Recente:</strong> ${escapeHtml(last.e)}</p>` : '';
+        let erroHtml = last.e ? `<div style="background:rgba(239, 68, 68, 0.1); color:#ef4444; padding:10px; border-radius:6px; margin-bottom:15px;"><strong>⚠️ Erro Recente:</strong> ${escapeHtml(last.e)}</div>` : '';
         
-        let histHtml = '<hr><h4>Últimas Comunicações:</h4><ul style="font-size:0.9rem; padding-left:20px;">';
-        logs.slice(0, 5).forEach(l => {
-             const status = l.e ? '🔴' : '🟢';
-             histHtml += `<li>${status} ${escapeHtml(formatDateBr(l.d))}</li>`;
+        let histHtml = '<div style="margin-top:20px;"><h4 style="margin-bottom:10px;">Histórico Recente</h4><div style="max-height:200px; overflow-y:auto; border:1px solid var(--border); border-radius:8px;">';
+        histHtml += '<table style="min-width:100%; font-size:0.9rem;">';
+        logs.slice(0, 10).forEach(l => {
+             const color = l.e ? '#ef4444' : '#10b981';
+             const icon = l.e ? '✖' : '✔';
+             histHtml += `<tr><td style="color:${color}; width:20px;">${icon}</td><td>${formatDateBr(l.d)}</td><td style="color:#64748b">${l.e ? escapeHtml(l.e) : 'Sucesso'}</td></tr>`;
         });
-        histHtml += '</ul>';
+        histHtml += '</table></div></div>';
 
-        document.getElementById('m-title').innerText = `Veículo ${escapeHtml(veiculo)}`;
+        document.getElementById('m-title').innerHTML = `Veículo <strong>${escapeHtml(veiculo)}</strong>`;
         document.getElementById('m-body').innerHTML = `
-            <p><strong>Última Comunicação:</strong> ${escapeHtml(formatDateBr(last.d))}</p>
+            <div style="display:flex; gap:15px; margin-bottom:15px;">
+                <div style="flex:1; background:var(--bg); padding:10px; border-radius:8px;">
+                    <div style="font-size:0.75rem; color:var(--text-light);">Versão</div>
+                    <div style="font-weight:bold;">${escapeHtml(meta.versao || 'N/A')}</div>
+                </div>
+                <div style="flex:1; background:var(--bg); padding:10px; border-radius:8px;">
+                    <div style="font-size:0.75rem; color:var(--text-light);">EOD</div>
+                    <div style="font-weight:bold;">${escapeHtml(meta.eod || 'N/A')}</div>
+                </div>
+                <div style="flex:1; background:var(--bg); padding:10px; border-radius:8px;">
+                    <div style="font-size:0.75rem; color:var(--text-light);">Série</div>
+                    <div style="font-weight:bold;">${escapeHtml(meta.serie || 'N/A')}</div>
+                </div>
+            </div>
             ${erroHtml}
-            <hr>
-            <p><strong>Série:</strong> ${escapeHtml(meta.serie)}</p>
-            <p><strong>Versão:</strong> ${escapeHtml(meta.versao)}</p>
-            <p><strong>EOD:</strong> ${escapeHtml(meta.eod)}</p>
             ${histHtml}
         `;
         modal.style.display = "block";
