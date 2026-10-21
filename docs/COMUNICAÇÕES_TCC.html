@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Monitoramento - TCC</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
     :root {
@@ -72,7 +73,32 @@
     .ant-card { background: var(--card-bg); border-radius: 12px; padding: 18px; border: 1px solid var(--border); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 8px; transition: 0.2s; }
     .ant-card:hover { transform: translateY(-2px); box-shadow: 0 8px 16px -2px rgba(0,0,0,0.1); }
     .ant-card.status-online { border-left: 5px solid var(--success); }
-    .ant-card.status-offline { border-left: 5px solid var(--danger); }
+    .ant-card.status-offline { border-left: 5px solid var(--danger); animation: pulse-danger 2s infinite; }
+    @keyframes pulse-danger {
+        0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+        70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+    
+    /* Realtime & Alert Banner Styles */
+    .realtime-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; font-weight: 600; padding: 4px 10px; border-radius: 12px; background: rgba(16, 185, 129, 0.12); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.25); transition: 0.3s; }
+    .realtime-badge.disconnected { background: rgba(100, 116, 139, 0.1); color: var(--secondary); border-color: rgba(100, 116, 139, 0.2); }
+    
+    .alert-banner { background: linear-gradient(90deg, #ef4444, #b91c1c); color: white; padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; font-weight: 600; animation: slideDown 0.3s ease; position: sticky; top: 68px; z-index: 45; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35); }
+    .alert-content { display: flex; align-items: center; gap: 12px; }
+    .alert-icon { font-size: 1.6rem; animation: sirenBounce 1s infinite alternate; }
+    @keyframes sirenBounce { from { transform: scale(1); } to { transform: scale(1.2); } }
+    @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .btn-alert-close { background: rgba(255,255,255,0.25); border: none; color: white; border-radius: 50%; width: 28px; height: 28px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+    .btn-alert-close:hover { background: rgba(255,255,255,0.4); }
+    
+    /* Toast Notifications */
+    .toast-container { position: fixed; top: 85px; right: 25px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 400px; pointer-events: none; }
+    .toast { pointer-events: auto; background: var(--card-bg); color: var(--text); padding: 14px 18px; border-radius: 12px; box-shadow: 0 10px 25px -3px rgba(0,0,0,0.25); border-left: 6px solid var(--danger); display: flex; align-items: flex-start; gap: 12px; animation: slideInRight 0.35s ease; transition: 0.3s; }
+    .toast.toast-success { border-left-color: var(--success); }
+    .toast-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 2px; }
+    .toast-msg { font-size: 0.85rem; color: var(--text-light); }
+    @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     .ant-card.status-desconhecido { border-left: 5px solid var(--warning); }
     .ant-header { display: flex; justify-content: space-between; align-items: center; }
     .ant-name { font-weight: 700; font-size: 1.05rem; color: var(--text); }
@@ -104,8 +130,11 @@
 <header class="header-wrapper">
     <div class="container header-content">
         <div>
-            <h1 style="margin:0; font-size: 1.5rem;">📊 TCC</h1>
-            <small style="color: var(--text-light); display: block; margin-top: 5px;">Última atualização: 16:29</small>
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <h1 style="margin:0; font-size: 1.5rem;">📊 TCC</h1>
+                <span id="realtime-status-pill" class="realtime-badge disconnected">⚪ Realtime Conectando...</span>
+            </div>
+            <small style="color: var(--text-light); display: block; margin-top: 5px;">Última atualização: 16:32</small>
         </div>
         <div style="display: flex; gap: 10px;">
             <button class="btn btn-outline" onclick="toggleTheme()">🌓 Tema</button>
@@ -114,6 +143,19 @@
         <div id="refresh-bar"></div>
     </div>
 </header>
+
+<div id="antenna-alert-banner" class="alert-banner hidden">
+    <div class="alert-content">
+        <span class="alert-icon">🚨</span>
+        <div class="alert-text">
+            <strong>ALERTA DE QUEDA DE ANTENA:</strong>
+            <span id="alert-antenna-desc">Uma ou mais antenas estão inacessíveis!</span>
+        </div>
+    </div>
+    <button class="btn-alert-close" onclick="fecharAlertaAntena()" title="Fechar alerta">✕</button>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
 
 <div class="container">
     <div class="kpi-grid">
@@ -256,9 +298,15 @@
     const COMMS_50 = JSON.parse(atob("eyIyMDMwMDEiOiBbeyJkYXRhIjogIjIxLzEwLzIwMjYgMTM6NDY6MTIiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjEvMTAvMjAyNiAxMDo1MToyMCIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMS8xMC8yMDI2IDEwOjE5OjU3IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIxLzEwLzIwMjYgMDk6NDk6NDgiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjEvMTAvMjAyNiAwNTowMDozOSIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMS8xMC8yMDI2IDA0OjMwOjA2IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIxLzEwLzIwMjYgMDQ6MDA6MTEiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjEvMTAvMjAyNiAwMzoyOTozOSIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMS8xMC8yMDI2IDAyOjU4OjU3IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIxLzEwLzIwMjYgMDI6Mjg6MjUiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjEvMTAvMjAyNiAwMTo1ODoyOSIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMS8xMC8yMDI2IDAxOjI5OjI0IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIxLzEwLzIwMjYgMDA6NTc6NDkiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjEvMTAvMjAyNiAwMDoyNzo0MyIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMC8xMC8yMDI2IDIzOjU2OjIxIiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMjM6Mjc6MDMiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjAvMTAvMjAyNiAyMjo1NTo0MiIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMC8xMC8yMDI2IDE3OjU2OjI0IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMTc6Mjc6MTgiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjAvMTAvMjAyNiAxNjo1NjoyNCIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMC8xMC8yMDI2IDEzOjMyOjA1IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMTA6NDk6MzgiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjAvMTAvMjAyNiAwOTo1Mzo1NCIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMC8xMC8yMDI2IDA1OjAzOjQ5IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMDQ6MzM6MzEiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjAvMTAvMjAyNiAwNDowMzowNCIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMC8xMC8yMDI2IDAzOjMzOjAwIiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMDM6MDE6NDEiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjAvMTAvMjAyNiAwMjozMjoyNCIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMC8xMC8yMDI2IDAyOjAxOjA0IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMDE6MzE6MzkiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjAvMTAvMjAyNiAwMTowMTowOCIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMC8xMC8yMDI2IDAwOjMxOjAxIiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMDA6MDA6MzAiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMTkvMTAvMjAyNiAyMzozMDozNiIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIxOS8xMC8yMDI2IDIzOjAwOjA0IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjE5LzEwLzIwMjYgMjA6NTQ6MjMiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMTkvMTAvMjAyNiAyMDoyNToxOCIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIxOS8xMC8yMDI2IDE5OjUzOjU5IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjE5LzEwLzIwMjYgMTQ6MjE6MjIiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMTkvMTAvMjAyNiAxMjo1NTo1OCIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIxOS8xMC8yMDI2IDEwOjU0OjQ3IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjE5LzEwLzIwMjYgMTA6NTM6MzAiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMTkvMTAvMjAyNiAwOTo1OTo1MSIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIxOS8xMC8yMDI2IDA1OjAzOjI2IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjE5LzEwLzIwMjYgMDQ6MzM6MzMiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMTkvMTAvMjAyNiAwNDowMjoxMyIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIxOS8xMC8yMDI2IDAzOjMxOjMwIiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjE5LzEwLzIwMjYgMDM6MDE6MzYiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMTkvMTAvMjAyNiAwMjozMTo0NSIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH1dLCAiMjAzMDAyIjogW3siZGF0YSI6ICIyMS8xMC8yMDI2IDE0OjU1OjQ1IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIxLzEwLzIwMjYgMTE6MzI6MjEiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjEvMTAvMjAyNiAxMTowMjoyNiIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMS8xMC8yMDI2IDA1OjQ2OjE2IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIxLzEwLzIwMjYgMDU6MTU6MTciLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjEvMTAvMjAyNiAwNDo0NTowMiIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMS8xMC8yMDI2IDA0OjE1OjA3IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIxLzEwLzIwMjYgMDM6NDQ6MzYiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjEvMTAvMjAyNiAwMzoxNDo0MyIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMS8xMC8yMDI2IDAyOjQ0OjExIiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIxLzEwLzIwMjYgMDI6MTQ6MTYiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjEvMTAvMjAyNiAwMTo0Mzo0MyIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMS8xMC8yMDI2IDAxOjEzOjQ4IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIxLzEwLzIwMjYgMDA6NDI6MDIiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjEvMTAvMjAyNiAwMDoxMjowNyIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMC8xMC8yMDI2IDIzOjQyOjExIiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMjM6MTI6MDQiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjAvMTAvMjAyNiAyMjo0MTozMCIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMC8xMC8yMDI2IDIyOjExOjIyIiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMjE6NDA6MDEiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjAvMTAvMjAyNiAyMToxMDo1NSIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMC8xMC8yMDI2IDIwOjM5OjQ2IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMjA6MDk6MDQiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjAvMTAvMjAyNiAxOTozODo0NSIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMC8xMC8yMDI2IDE5OjA4OjUwIiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMTg6Mzk6MTUiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjAvMTAvMjAyNiAxODowOToyMiIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMC8xMC8yMDI2IDE0OjUyOjI0IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMTE6Mzc6MDQiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjAvMTAvMjAyNiAxMTowNjozMSIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMC8xMC8yMDI2IDA2OjAzOjIwIiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMDU6MzM6MjYiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjAvMTAvMjAyNiAwNTowMjo1MyIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMC8xMC8yMDI2IDA0OjMyOjM2IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMDQ6MDI6MDgiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjAvMTAvMjAyNiAwMzozMjowNCIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMC8xMC8yMDI2IDAzOjAwOjQzIiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMDI6MzE6MjYiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjAvMTAvMjAyNiAwMjowMDowNiIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIyMC8xMC8yMDI2IDAxOjMwOjM5IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMDE6MDA6MDkiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMjAvMTAvMjAyNiAwMDozMDowMiIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIxOS8xMC8yMDI2IDIzOjU5OjMwIiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjE5LzEwLzIwMjYgMjM6Mjk6MzciLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMTkvMTAvMjAyNiAyMjo1OTowNyIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIxOS8xMC8yMDI2IDIyOjI4OjM3IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjE5LzEwLzIwMjYgMjE6NTc6MTciLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9LCB7ImRhdGEiOiAiMTkvMTAvMjAyNiAxODoyODo0OSIsICJhcGwiOiAiOTEuMTMiLCAiZW9kIjogIjI0OCIsICJlcnJvIjogbnVsbH0sIHsiZGF0YSI6ICIxOS8xMC8yMDI2IDE3OjU4OjE3IiwgImFwbCI6ICI5MS4xMyIsICJlb2QiOiAiMjQ4IiwgImVycm8iOiBudWxsfSwgeyJkYXRhIjogIjE5LzEwLzIwMjYgMTM6NDI6MTAiLCAiYXBsIjogIjkxLjEzIiwgImVvZCI6ICIyNDgiLCAiZXJybyI6IG51bGx9XX0="));
     const TGS_30 = JSON.parse(atob("eyIyMDMwMDIiOiBbeyJkYXRhIjogIjIxLzEwLzIwMjYgMTQ6NTY6MDAiLCAic2VxIjogIjEwNzcifSwgeyJkYXRhIjogIjIxLzEwLzIwMjYgMTE6MDI6MDAiLCAic2VxIjogIjEwNzYifSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMTg6MDk6MDAiLCAic2VxIjogIjEwNzUifSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMTQ6NTI6MDAiLCAic2VxIjogIjEwNzQifSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMTE6MDY6MDAiLCAic2VxIjogIjEwNzMifSwgeyJkYXRhIjogIjE5LzEwLzIwMjYgMjE6NTc6MDAiLCAic2VxIjogIjEwNzIifSwgeyJkYXRhIjogIjE5LzEwLzIwMjYgMTc6NTg6MDAiLCAic2VxIjogIjEwNzEifSwgeyJkYXRhIjogIjE5LzEwLzIwMjYgMTM6NDI6MDAiLCAic2VxIjogIjEwNzAifSwgeyJkYXRhIjogIjE5LzEwLzIwMjYgMTE6MDQ6MDAiLCAic2VxIjogIjEwNjkifSwgeyJkYXRhIjogIjE2LzEwLzIwMjYgMjE6NTY6MDAiLCAic2VxIjogIjEwNjgifSwgeyJkYXRhIjogIjE2LzEwLzIwMjYgMTc6NTA6MDAiLCAic2VxIjogIjEwNjcifSwgeyJkYXRhIjogIjE2LzEwLzIwMjYgMTM6NTY6MDAiLCAic2VxIjogIjEwNjYifSwgeyJkYXRhIjogIjE2LzEwLzIwMjYgMTA6NTk6MDAiLCAic2VxIjogIjEwNjUifSwgeyJkYXRhIjogIjE1LzEwLzIwMjYgMjE6NTE6MDAiLCAic2VxIjogIjEwNjQifSwgeyJkYXRhIjogIjE1LzEwLzIwMjYgMTk6Mzc6MDAiLCAic2VxIjogIjEwNjMifSwgeyJkYXRhIjogIjE0LzEwLzIwMjYgMjE6NTI6MDAiLCAic2VxIjogIjEwNjIifSwgeyJkYXRhIjogIjE0LzEwLzIwMjYgMTc6NTM6MDAiLCAic2VxIjogIjEwNjEifSwgeyJkYXRhIjogIjE0LzEwLzIwMjYgMTM6NTI6MDAiLCAic2VxIjogIjEwNjAifSwgeyJkYXRhIjogIjE0LzEwLzIwMjYgMTA6NTc6MDAiLCAic2VxIjogIjEwNTkifSwgeyJkYXRhIjogIjEzLzEwLzIwMjYgMjE6NTQ6MDAiLCAic2VxIjogIjEwNTgifSwgeyJkYXRhIjogIjEzLzEwLzIwMjYgMTc6NTY6MDAiLCAic2VxIjogIjEwNTcifSwgeyJkYXRhIjogIjEzLzEwLzIwMjYgMTM6NTM6MDAiLCAic2VxIjogIjEwNTYifSwgeyJkYXRhIjogIjEzLzEwLzIwMjYgMTA6NTE6MDAiLCAic2VxIjogIjEwNTUifSwgeyJkYXRhIjogIjA5LzEwLzIwMjYgMjE6NTM6MDAiLCAic2VxIjogIjEwNTQifSwgeyJkYXRhIjogIjA5LzEwLzIwMjYgMTc6NTQ6MDAiLCAic2VxIjogIjEwNTMifSwgeyJkYXRhIjogIjA5LzEwLzIwMjYgMTM6NTc6MDAiLCAic2VxIjogIjEwNTIifSwgeyJkYXRhIjogIjA5LzEwLzIwMjYgMTE6NTc6MDAiLCAic2VxIjogIjEwNTEifSwgeyJkYXRhIjogIjA5LzEwLzIwMjYgMTE6MDI6MDAiLCAic2VxIjogIjEwNTAifSwgeyJkYXRhIjogIjA4LzEwLzIwMjYgMjE6NTY6MDAiLCAic2VxIjogIjEwNDkifSwgeyJkYXRhIjogIjA4LzEwLzIwMjYgMTc6NTY6MDAiLCAic2VxIjogIjEwNDgifV0sICIyMDMwMDEiOiBbeyJkYXRhIjogIjIxLzEwLzIwMjYgMTM6NDY6MDAiLCAic2VxIjogIjEzMDYifSwgeyJkYXRhIjogIjIxLzEwLzIwMjYgMDk6NTA6MDAiLCAic2VxIjogIjEzMDUifSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMjI6NTU6MDAiLCAic2VxIjogIjEzMDQifSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMTY6NTY6MDAiLCAic2VxIjogIjEzMDMifSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMTM6MzI6MDAiLCAic2VxIjogIjEzMDIifSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMTA6NDk6MDAiLCAic2VxIjogIjEzMDEifSwgeyJkYXRhIjogIjIwLzEwLzIwMjYgMDk6NTQ6MDAiLCAic2VxIjogIjEzMDAifSwgeyJkYXRhIjogIjE5LzEwLzIwMjYgMjM6MDA6MDAiLCAic2VxIjogIjEyOTkifSwgeyJkYXRhIjogIjE5LzEwLzIwMjYgMTk6NTQ6MDAiLCAic2VxIjogIjEyOTgifSwgeyJkYXRhIjogIjE5LzEwLzIwMjYgMTQ6MjE6MDAiLCAic2VxIjogIjEyOTcifSwgeyJkYXRhIjogIjE5LzEwLzIwMjYgMTI6NTY6MDAiLCAic2VxIjogIjEyOTYifSwgeyJkYXRhIjogIjE5LzEwLzIwMjYgMTA6NTM6MDAiLCAic2VxIjogIjEyOTUifSwgeyJkYXRhIjogIjE5LzEwLzIwMjYgMTA6MDA6MDAiLCAic2VxIjogIjEyOTQifSwgeyJkYXRhIjogIjE4LzEwLzIwMjYgMjM6MDA6MDAiLCAic2VxIjogIjEyOTMifSwgeyJkYXRhIjogIjE4LzEwLzIwMjYgMTc6NTg6MDAiLCAic2VxIjogIjEyOTIifSwgeyJkYXRhIjogIjE4LzEwLzIwMjYgMTQ6NTY6MDAiLCAic2VxIjogIjEyOTEifSwgeyJkYXRhIjogIjE4LzEwLzIwMjYgMTA6NTU6MDAiLCAic2VxIjogIjEyOTAifSwgeyJkYXRhIjogIjE3LzEwLzIwMjYgMjI6NTk6MDAiLCAic2VxIjogIjEyODkifSwgeyJkYXRhIjogIjE3LzEwLzIwMjYgMTg6MDI6MDAiLCAic2VxIjogIjEyODgifSwgeyJkYXRhIjogIjE3LzEwLzIwMjYgMTQ6MzI6MDAiLCAic2VxIjogIjEyODcifSwgeyJkYXRhIjogIjE3LzEwLzIwMjYgMTE6NTA6MDAiLCAic2VxIjogIjEyODYifSwgeyJkYXRhIjogIjE3LzEwLzIwMjYgMTE6MDQ6MDAiLCAic2VxIjogIjEyODUifSwgeyJkYXRhIjogIjE2LzEwLzIwMjYgMjI6NTM6MDAiLCAic2VxIjogIjEyODQifSwgeyJkYXRhIjogIjE2LzEwLzIwMjYgMTk6NTU6MDAiLCAic2VxIjogIjEyODMifSwgeyJkYXRhIjogIjE2LzEwLzIwMjYgMTQ6MzI6MDAiLCAic2VxIjogIjEyODIifSwgeyJkYXRhIjogIjE2LzEwLzIwMjYgMTI6NTM6MDAiLCAic2VxIjogIjEyODEifSwgeyJkYXRhIjogIjE2LzEwLzIwMjYgMTA6NTE6MDAiLCAic2VxIjogIjEyODAifSwgeyJkYXRhIjogIjE2LzEwLzIwMjYgMDk6NTY6MDAiLCAic2VxIjogIjEyNzkifSwgeyJkYXRhIjogIjE1LzEwLzIwMjYgMjM6MDQ6MDAiLCAic2VxIjogIjEyNzgifSwgeyJkYXRhIjogIjE1LzEwLzIwMjYgMDk6NTU6MDAiLCAic2VxIjogIjEyNzcifV19"));
     
+    // Configurações Supabase para Tempo Real
+    const SUPABASE_URL = "https://oiszcvmxteebrbtgcily.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_qehYrlZWWZpMv7Su6nvapA_25GNRxJs";
+    const NOME_GARAGEM = "TCC";
+
     // Antenas: Status Atual e Histórico de Alterações
-    const ANTENAS = JSON.parse(atob("W3sibm9tZSI6ICJhbnRlbmExIiwgImlwIjogIjE3Mi41NC4yMDMuMTAxIiwgInN0YXR1cyI6ICJvbmxpbmUiLCAidWx0aW1vX3BpbmciOiAiMjEvMTAvMjAyNiAxNjoyOTo1MSIsICJ1bHRpbWFfYWx0ZXJhY2FvIjogIjIwLzEwLzIwMjYgMTI6Mjk6NDQiLCAiZGV0YWxoZXMiOiAiSFRUUCAyMDAgT0sifV0="));
-    const ANTENAS_HISTORICO = JSON.parse(atob("W3siZGF0YV9ob3JhIjogIjIwLzEwLzIwMjYgMTI6Mjk6NDQiLCAibm9tZSI6ICJhbnRlbmExIiwgImlwIjogIjE3Mi41NC4yMDMuMTAxIiwgInN0YXR1c19hbnRlcmlvciI6ICJ2ZXJpZmljYW5kbyIsICJub3ZvX3N0YXR1cyI6ICJvbmxpbmUiLCAiZGV0YWxoZXMiOiAiSFRUUCAyMDAgT0sifV0="));
+    let ANTENAS = JSON.parse(atob("W3sibm9tZSI6ICJhbnRlbmExIiwgImlwIjogIjE3Mi41NC4yMDMuMTAxIiwgInN0YXR1cyI6ICJvbmxpbmUiLCAidWx0aW1vX3BpbmciOiAiMjEvMTAvMjAyNiAxNjozMjoxMSIsICJ1bHRpbWFfYWx0ZXJhY2FvIjogIjIxLzEwLzIwMjYgMTY6MzA6NDEiLCAiZGV0YWxoZXMiOiAiSFRUUCAyMDAgT0sifV0="));
+    let ANTENAS_HISTORICO = JSON.parse(atob("W3siZGF0YV9ob3JhIjogIjIxLzEwLzIwMjYgMTY6MzA6NDEiLCAibm9tZSI6ICJhbnRlbmExIiwgImlwIjogIjE3Mi41NC4yMDMuMTAxIiwgInN0YXR1c19hbnRlcmlvciI6ICJ2ZXJpZmljYW5kbyIsICJub3ZvX3N0YXR1cyI6ICJvbmxpbmUiLCAiZGV0YWxoZXMiOiAiSFRUUCAyMDAgT0sifSwgeyJkYXRhX2hvcmEiOiAiMjAvMTAvMjAyNiAxMjoyOTo0NCIsICJub21lIjogImFudGVuYTEiLCAiaXAiOiAiMTcyLjU0LjIwMy4xMDEiLCAic3RhdHVzX2FudGVyaW9yIjogInZlcmlmaWNhbmRvIiwgIm5vdm9fc3RhdHVzIjogIm9ubGluZSIsICJkZXRhbGhlcyI6ICJIVFRQIDIwMCBPSyJ9XQ=="));
+    let offlineAlerts = new Set();
     
     const datePicker = document.getElementById('datePicker');
     const searchInput = document.getElementById('globalSearch');
@@ -272,11 +320,187 @@
         document.getElementById('refresh-bar').style.width = ((300 - timeLeft) / 300 * 100) + '%';
     }, 1000);
 
+    function tocarAlertaSonoro() {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const audioCtx = new AudioCtx();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(360, audioCtx.currentTime + 0.35);
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.35);
+        } catch(e) {
+            console.log("Áudio indisponível:", e);
+        }
+    }
+
+    function showToast(title, msg, type = "danger") {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = `toast ${type === 'success' ? 'toast-success' : ''}`;
+        toast.innerHTML = `
+            <div style="font-size:1.4rem;">${type === 'success' ? '✅' : '🚨'}</div>
+            <div style="flex:1;">
+                <div class="toast-title">${escapeHtml(title)}</div>
+                <div class="toast-msg">${escapeHtml(msg)}</div>
+            </div>
+            <span style="cursor:pointer; color:var(--text-light); font-weight:bold; font-size:1.1rem;" onclick="this.parentElement.remove()">✕</span>
+        `;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            setTimeout(() => toast.remove(), 350);
+        }, 8000);
+    }
+
+    function atualizarBannerAlerta() {
+        const banner = document.getElementById('antenna-alert-banner');
+        const desc = document.getElementById('alert-antenna-desc');
+        if (!banner || !desc) return;
+        if (offlineAlerts.size > 0) {
+            desc.innerHTML = `Atenção: <strong>${Array.from(offlineAlerts).join(', ')}</strong> parou de responder! Verifique fonte de alimentação e rede.`;
+            banner.classList.remove('hidden');
+        } else {
+            banner.classList.add('hidden');
+        }
+    }
+
+    function fecharAlertaAntena() {
+        const banner = document.getElementById('antenna-alert-banner');
+        if (banner) banner.classList.add('hidden');
+    }
+
+    function tratarMudancaAntenaRealtime(novoReg) {
+        if (!novoReg || !novoReg.ip) return;
+        const ip = novoReg.ip;
+        const nome = novoReg.nome || ip;
+        const status = (novoReg.status || '').toLowerCase();
+        const agoraHora = novoReg.ultimo_ping ? new Date(novoReg.ultimo_ping).toLocaleTimeString() : new Date().toLocaleTimeString();
+
+        let encontrado = false;
+        for (let ant of ANTENAS) {
+            if (ant.ip === ip) {
+                const statusAnterior = (ant.status || '').toLowerCase();
+                ant.status = status;
+                ant.ultimo_ping = agoraHora;
+                ant.detalhes = novoReg.detalhes || '';
+                if (novoReg.ultima_alteracao) {
+                    try { ant.ultima_alteracao = new Date(novoReg.ultima_alteracao).toLocaleString(); } catch(e){}
+                }
+                encontrado = true;
+
+                if (status === 'offline' && statusAnterior !== 'offline') {
+                    offlineAlerts.add(`${nome} (${ip})`);
+                    atualizarBannerAlerta();
+                    tocarAlertaSonoro();
+                    showToast('QUEDA DE ANTENA!', `A antena ${nome} (${ip}) está OFFLINE!`, 'danger');
+                    adicionarLinhaHistoricoRealtime(nome, ip, statusAnterior, 'offline', novoReg.detalhes);
+                } else if (status === 'online' && statusAnterior === 'offline') {
+                    offlineAlerts.delete(`${nome} (${ip})`);
+                    atualizarBannerAlerta();
+                    showToast('ANTENA RESTABELECIDA', `A antena ${nome} (${ip}) voltou a ficar ONLINE!`, 'success');
+                    adicionarLinhaHistoricoRealtime(nome, ip, statusAnterior, 'online', 'Conexão restabelecida');
+                }
+                break;
+            }
+        }
+
+        if (!encontrado) {
+            ANTENAS.push({
+                nome: nome,
+                ip: ip,
+                status: status,
+                ultimo_ping: agoraHora,
+                ultima_alteracao: new Date().toLocaleString(),
+                detalhes: novoReg.detalhes || ''
+            });
+            if (status === 'offline') {
+                offlineAlerts.add(`${nome} (${ip})`);
+                atualizarBannerAlerta();
+                tocarAlertaSonoro();
+                showToast('QUEDA DE ANTENA!', `A antena ${nome} (${ip}) está OFFLINE!`, 'danger');
+            }
+        }
+
+        renderAntenasCards();
+    }
+
+    function adicionarLinhaHistoricoRealtime(nome, ip, stAnt, stNovo, detalhes) {
+        const listAntHist = document.getElementById('list-antenas-historico');
+        if (!listAntHist) return;
+        const badgeNovo = stNovo === 'online' ? 'badge-online' : 'badge-error';
+        const badgeAnt = stAnt === 'online' ? 'badge-online' : (stAnt === 'offline' ? 'badge-error' : 'badge-offline');
+        const horaStr = new Date().toLocaleString();
+        
+        const rowHtml = `
+            <tr style="animation: fadeIn 0.5s ease; background: ${stNovo === 'offline' ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)'};">
+                <td><strong>${horaStr} ⚡ Realtime</strong></td>
+                <td>📡 ${escapeHtml(nome)}</td>
+                <td><code>${escapeHtml(ip)}</code></td>
+                <td><span class="badge ${badgeAnt}">${escapeHtml((stAnt||'').toUpperCase())}</span></td>
+                <td><span class="badge ${badgeNovo}">${escapeHtml(stNovo.toUpperCase())}</span></td>
+                <td><small>${escapeHtml(detalhes || '-')}</small></td>
+            </tr>
+        `;
+        listAntHist.insertAdjacentHTML('afterbegin', rowHtml);
+    }
+
+    function initRealtimeSupabase() {
+        const pill = document.getElementById('realtime-status-pill');
+        if (!window.supabase || !SUPABASE_URL || !SUPABASE_KEY || !SUPABASE_URL.startsWith('http')) {
+            if (pill) {
+                pill.className = "realtime-badge disconnected";
+                pill.innerHTML = "⚪ Modo Estático (GitHub)";
+            }
+            return;
+        }
+
+        try {
+            const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            const channel = sb.channel('painel-antenas-realtime')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'status_antenas' }, (payload) => {
+                    console.log('⚡ [Realtime Supabase] Alteração de antena recebida:', payload);
+                    if (payload.new) {
+                        tratarMudancaAntenaRealtime(payload.new);
+                    }
+                })
+                .subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                        if (pill) {
+                            pill.className = "realtime-badge";
+                            pill.innerHTML = "🟢 Realtime Ativo (Supabase)";
+                        }
+                    } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+                        if (pill) {
+                            pill.className = "realtime-badge disconnected";
+                            pill.innerHTML = "🟡 Reconectando Realtime...";
+                        }
+                    }
+                });
+        } catch(err) {
+            console.error("Falha ao inicializar Supabase Realtime:", err);
+            if (pill) {
+                pill.className = "realtime-badge disconnected";
+                pill.innerHTML = "⚪ Supabase Indisponível";
+            }
+        }
+    }
+
     function init() {
         datePicker.addEventListener('change', renderDashboard);
         searchInput.addEventListener('keyup', applyFilters);
         metaFilter.addEventListener('change', applyFilters);
         renderDashboard();
+        initRealtimeSupabase();
     }
 
     function toggleTheme() {
@@ -304,6 +528,55 @@
     }
 
     let lastCounts = { online: 0, offline: 0, critical: 0, total: 0 };
+
+        function renderAntenasCards() {
+        let antOnline = 0;
+        offlineAlerts.clear();
+        const antCards = document.getElementById('antenas-cards-container');
+        if (antCards) {
+            antCards.innerHTML = '';
+            if (ANTENAS && ANTENAS.length > 0) {
+                ANTENAS.forEach(ant => {
+                    const isOnline = (ant.status || '').toLowerCase() === 'online';
+                    const isOffline = (ant.status || '').toLowerCase() === 'offline';
+                    if (isOnline) antOnline++;
+                    if (isOffline) offlineAlerts.add(`${ant.nome || 'Antena'} (${ant.ip})`);
+
+                    const stClass = isOnline ? 'status-online' : (isOffline ? 'status-offline' : 'status-desconhecido');
+                    const badgeClass = isOnline ? 'badge-online' : (isOffline ? 'badge-error' : 'badge-offline');
+                    const stText = isOnline ? 'ONLINE' : (isOffline ? 'OFFLINE' : 'VERIFICANDO');
+                    
+                    antCards.insertAdjacentHTML('beforeend', `
+                        <div class="ant-card ${stClass}" id="card-antena-${(ant.ip||'').split('.').join('-')}">
+                            <div class="ant-header">
+                                <span class="ant-name">📡 ${escapeHtml(ant.nome || 'Antena')}</span>
+                                <span class="badge ${badgeClass}">${stText}</span>
+                            </div>
+                            <div class="ant-ip">${escapeHtml(ant.ip)}</div>
+                            <div class="ant-meta">🕒 Último teste: ${escapeHtml(ant.ultimo_ping || '-')}</div>
+                            <div class="ant-meta">🔄 Última mudança: ${escapeHtml(ant.ultima_alteracao || '-')}</div>
+                            <div class="ant-meta" style="font-size:0.75rem;">ℹ️ ${escapeHtml(ant.detalhes || '')}</div>
+                        </div>
+                    `);
+                });
+            } else {
+                antCards.innerHTML = '<div style="color:var(--text-light); padding:10px;">Nenhuma antena configurada na seção [Antennas].</div>';
+            }
+        }
+        
+        const kpiAntenas = document.getElementById('kpi-antenas');
+        if (kpiAntenas) {
+            const totalAnt = (ANTENAS || []).length;
+            kpiAntenas.innerText = `${antOnline}/${totalAnt}`;
+            const kpiAntSub = document.getElementById('kpi-antenas-sub');
+            if (kpiAntSub) {
+                kpiAntSub.innerText = (antOnline === totalAnt && totalAnt > 0) ? "Todas Operacionais" : `${totalAnt - antOnline} com falha`;
+                kpiAntSub.style.color = (antOnline === totalAnt && totalAnt > 0) ? "var(--success)" : "var(--danger)";
+            }
+        }
+
+        atualizarBannerAlerta();
+    }
 
     function renderDashboard() {
         const selectedDateStr = datePicker.value;
@@ -376,47 +649,7 @@
         const active = counts.online + counts.critical;
         document.getElementById('kpi-rate').innerText = active > 0 ? ((counts.online / active) * 100).toFixed(1) + '%' : '0%';
 
-        // Renderiza Antenas (Status Atual)
-        let antOnline = 0;
-        const antCards = document.getElementById('antenas-cards-container');
-        if (antCards) {
-            antCards.innerHTML = '';
-            if (ANTENAS && ANTENAS.length > 0) {
-                ANTENAS.forEach(ant => {
-                    const isOnline = (ant.status || '').toLowerCase() === 'online';
-                    if (isOnline) antOnline++;
-                    const stClass = isOnline ? 'status-online' : (ant.status === 'offline' ? 'status-offline' : 'status-desconhecido');
-                    const badgeClass = isOnline ? 'badge-online' : (ant.status === 'offline' ? 'badge-error' : 'badge-offline');
-                    const stText = isOnline ? 'ONLINE' : (ant.status === 'offline' ? 'OFFLINE' : 'VERIFICANDO');
-                    
-                    antCards.insertAdjacentHTML('beforeend', `
-                        <div class="ant-card ${stClass}">
-                            <div class="ant-header">
-                                <span class="ant-name">📡 ${escapeHtml(ant.nome || 'Antena')}</span>
-                                <span class="badge ${badgeClass}">${stText}</span>
-                            </div>
-                            <div class="ant-ip">${escapeHtml(ant.ip)}</div>
-                            <div class="ant-meta">🕒 Último teste: ${escapeHtml(ant.ultimo_ping || '-')}</div>
-                            <div class="ant-meta">🔄 Última mudança: ${escapeHtml(ant.ultima_alteracao || '-')}</div>
-                            <div class="ant-meta" style="font-size:0.75rem;">ℹ️ ${escapeHtml(ant.detalhes || '')}</div>
-                        </div>
-                    `);
-                });
-            } else {
-                antCards.innerHTML = '<div style="color:var(--text-light); padding:10px;">Nenhuma antena configurada na seção [Antennas].</div>';
-            }
-        }
-        
-        const kpiAntenas = document.getElementById('kpi-antenas');
-        if (kpiAntenas) {
-            const totalAnt = (ANTENAS || []).length;
-            kpiAntenas.innerText = `${antOnline}/${totalAnt}`;
-            const kpiAntSub = document.getElementById('kpi-antenas-sub');
-            if (kpiAntSub) {
-                kpiAntSub.innerText = (antOnline === totalAnt && totalAnt > 0) ? "Todas Operacionais" : `${totalAnt - antOnline} com falha`;
-                kpiAntSub.style.color = (antOnline === totalAnt && totalAnt > 0) ? "var(--success)" : "var(--danger)";
-            }
-        }
+        renderAntenasCards();
 
         // Renderiza Histórico de Alterações de Status das Antenas
         const listAntHist = document.getElementById('list-antenas-historico');
