@@ -134,7 +134,7 @@
                 <h1 style="margin:0; font-size: 1.5rem;">📊 TCC</h1>
                 <span id="realtime-status-pill" class="realtime-badge disconnected">⚪ Realtime Conectando...</span>
             </div>
-            <small style="color: var(--text-light); display: block; margin-top: 5px;">Última atualização: 16:32</small>
+            <small style="color: var(--text-light); display: block; margin-top: 5px;">Última atualização: 16:51</small>
         </div>
         <div style="display: flex; gap: 10px;">
             <button class="btn btn-outline" onclick="toggleTheme()">🌓 Tema</button>
@@ -302,10 +302,11 @@
     const SUPABASE_URL = "https://oiszcvmxteebrbtgcily.supabase.co";
     const SUPABASE_KEY = "sb_publishable_qehYrlZWWZpMv7Su6nvapA_25GNRxJs";
     const NOME_GARAGEM = "TCC";
+    const GARAGEM_ID = "d76e40ba-4137-4134-9984-2a5f01bf7e93";
 
     // Antenas: Status Atual e Histórico de Alterações
-    let ANTENAS = JSON.parse(atob("W3sibm9tZSI6ICJhbnRlbmExIiwgImlwIjogIjE3Mi41NC4yMDMuMTAxIiwgInN0YXR1cyI6ICJvbmxpbmUiLCAidWx0aW1vX3BpbmciOiAiMjEvMTAvMjAyNiAxNjozMjoxMSIsICJ1bHRpbWFfYWx0ZXJhY2FvIjogIjIxLzEwLzIwMjYgMTY6MzA6NDEiLCAiZGV0YWxoZXMiOiAiSFRUUCAyMDAgT0sifV0="));
-    let ANTENAS_HISTORICO = JSON.parse(atob("W3siZGF0YV9ob3JhIjogIjIxLzEwLzIwMjYgMTY6MzA6NDEiLCAibm9tZSI6ICJhbnRlbmExIiwgImlwIjogIjE3Mi41NC4yMDMuMTAxIiwgInN0YXR1c19hbnRlcmlvciI6ICJ2ZXJpZmljYW5kbyIsICJub3ZvX3N0YXR1cyI6ICJvbmxpbmUiLCAiZGV0YWxoZXMiOiAiSFRUUCAyMDAgT0sifSwgeyJkYXRhX2hvcmEiOiAiMjAvMTAvMjAyNiAxMjoyOTo0NCIsICJub21lIjogImFudGVuYTEiLCAiaXAiOiAiMTcyLjU0LjIwMy4xMDEiLCAic3RhdHVzX2FudGVyaW9yIjogInZlcmlmaWNhbmRvIiwgIm5vdm9fc3RhdHVzIjogIm9ubGluZSIsICJkZXRhbGhlcyI6ICJIVFRQIDIwMCBPSyJ9XQ=="));
+    let ANTENAS = JSON.parse(atob("W3sibm9tZSI6ICJhbnRlbmExIiwgImlwIjogIjE3Mi41NC4yMDMuMTAxIiwgInN0YXR1cyI6ICJvbmxpbmUiLCAidWx0aW1vX3BpbmciOiAiMjEvMTAvMjAyNiAxNjo1MToyMiIsICJ1bHRpbWFfYWx0ZXJhY2FvIjogIjIxLzEwLzIwMjYgMTY6NTA6MDEiLCAiZGV0YWxoZXMiOiAiSFRUUCAyMDAgT0sifV0="));
+    let ANTENAS_HISTORICO = JSON.parse(atob("W3siZGF0YV9ob3JhIjogIjIxLzEwLzIwMjYgMTY6NTA6MDEiLCAibm9tZSI6ICJhbnRlbmExIiwgImlwIjogIjE3Mi41NC4yMDMuMTAxIiwgInN0YXR1c19hbnRlcmlvciI6ICJ2ZXJpZmljYW5kbyIsICJub3ZvX3N0YXR1cyI6ICJvbmxpbmUiLCAiZGV0YWxoZXMiOiAiSFRUUCAyMDAgT0sifSwgeyJkYXRhX2hvcmEiOiAiMjEvMTAvMjAyNiAxNjozMDo0MSIsICJub21lIjogImFudGVuYTEiLCAiaXAiOiAiMTcyLjU0LjIwMy4xMDEiLCAic3RhdHVzX2FudGVyaW9yIjogInZlcmlmaWNhbmRvIiwgIm5vdm9fc3RhdHVzIjogIm9ubGluZSIsICJkZXRhbGhlcyI6ICJIVFRQIDIwMCBPSyJ9LCB7ImRhdGFfaG9yYSI6ICIyMC8xMC8yMDI2IDEyOjI5OjQ0IiwgIm5vbWUiOiAiYW50ZW5hMSIsICJpcCI6ICIxNzIuNTQuMjAzLjEwMSIsICJzdGF0dXNfYW50ZXJpb3IiOiAidmVyaWZpY2FuZG8iLCAibm92b19zdGF0dXMiOiAib25saW5lIiwgImRldGFsaGVzIjogIkhUVFAgMjAwIE9LIn1d"));
     let offlineAlerts = new Set();
     
     const datePicker = document.getElementById('datePicker');
@@ -381,54 +382,47 @@
 
     function tratarMudancaAntenaRealtime(novoReg) {
         if (!novoReg || !novoReg.ip) return;
-        const ip = novoReg.ip;
-        const nome = novoReg.nome || ip;
+
+        // 1. ISOLAMENTO POR GARAGEM: Se o evento contiver garagem_id diferente, ignora sumariamente!
+        if (GARAGEM_ID && novoReg.garagem_id && String(novoReg.garagem_id) !== String(GARAGEM_ID)) {
+            console.log(`[Isolamento] Ignorado: evento da garagem_id ${novoReg.garagem_id} (painel atual é ${GARAGEM_ID})`);
+            return;
+        }
+
+        const ip = (novoReg.ip || '').trim();
+
+        // 2. ISOLAMENTO POR WHITELIST DE IPS:
+        // Processa APENAS se o IP pertencer às antenas configuradas para ESTA garagem!
+        // Jamais inclui antenas de outros servidores/garagens no painel.
+        const antExistente = ANTENAS.find(a => (a.ip || '').trim() === ip);
+        if (!antExistente) {
+            console.log(`[Isolamento] Ignorado: IP ${ip} não pertence à garagem ${NOME_GARAGEM}`);
+            return;
+        }
+
+        const nome = antExistente.nome || novoReg.nome || ip;
         const status = (novoReg.status || '').toLowerCase();
         const agoraHora = novoReg.ultimo_ping ? new Date(novoReg.ultimo_ping).toLocaleTimeString() : new Date().toLocaleTimeString();
 
-        let encontrado = false;
-        for (let ant of ANTENAS) {
-            if (ant.ip === ip) {
-                const statusAnterior = (ant.status || '').toLowerCase();
-                ant.status = status;
-                ant.ultimo_ping = agoraHora;
-                ant.detalhes = novoReg.detalhes || '';
-                if (novoReg.ultima_alteracao) {
-                    try { ant.ultima_alteracao = new Date(novoReg.ultima_alteracao).toLocaleString(); } catch(e){}
-                }
-                encontrado = true;
-
-                if (status === 'offline' && statusAnterior !== 'offline') {
-                    offlineAlerts.add(`${nome} (${ip})`);
-                    atualizarBannerAlerta();
-                    tocarAlertaSonoro();
-                    showToast('QUEDA DE ANTENA!', `A antena ${nome} (${ip}) está OFFLINE!`, 'danger');
-                    adicionarLinhaHistoricoRealtime(nome, ip, statusAnterior, 'offline', novoReg.detalhes);
-                } else if (status === 'online' && statusAnterior === 'offline') {
-                    offlineAlerts.delete(`${nome} (${ip})`);
-                    atualizarBannerAlerta();
-                    showToast('ANTENA RESTABELECIDA', `A antena ${nome} (${ip}) voltou a ficar ONLINE!`, 'success');
-                    adicionarLinhaHistoricoRealtime(nome, ip, statusAnterior, 'online', 'Conexão restabelecida');
-                }
-                break;
-            }
+        const statusAnterior = (antExistente.status || '').toLowerCase();
+        antExistente.status = status;
+        antExistente.ultimo_ping = agoraHora;
+        antExistente.detalhes = novoReg.detalhes || '';
+        if (novoReg.ultima_alteracao) {
+            try { antExistente.ultima_alteracao = new Date(novoReg.ultima_alteracao).toLocaleString(); } catch(e){}
         }
 
-        if (!encontrado) {
-            ANTENAS.push({
-                nome: nome,
-                ip: ip,
-                status: status,
-                ultimo_ping: agoraHora,
-                ultima_alteracao: new Date().toLocaleString(),
-                detalhes: novoReg.detalhes || ''
-            });
-            if (status === 'offline') {
-                offlineAlerts.add(`${nome} (${ip})`);
-                atualizarBannerAlerta();
-                tocarAlertaSonoro();
-                showToast('QUEDA DE ANTENA!', `A antena ${nome} (${ip}) está OFFLINE!`, 'danger');
-            }
+        if (status === 'offline' && statusAnterior !== 'offline') {
+            offlineAlerts.add(`${nome} (${ip})`);
+            atualizarBannerAlerta();
+            tocarAlertaSonoro();
+            showToast('QUEDA DE ANTENA!', `A antena ${nome} (${ip}) está OFFLINE!`, 'danger');
+            adicionarLinhaHistoricoRealtime(nome, ip, statusAnterior, 'offline', novoReg.detalhes);
+        } else if (status === 'online' && statusAnterior === 'offline') {
+            offlineAlerts.delete(`${nome} (${ip})`);
+            atualizarBannerAlerta();
+            showToast('ANTENA RESTABELECIDA', `A antena ${nome} (${ip}) voltou a ficar ONLINE!`, 'success');
+            adicionarLinhaHistoricoRealtime(nome, ip, statusAnterior, 'online', 'Conexão restabelecida');
         }
 
         renderAntenasCards();
@@ -466,8 +460,19 @@
 
         try {
             const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            const channel = sb.channel('painel-antenas-realtime')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'status_antenas' }, (payload) => {
+            const channelName = `realtime-antenas-${(NOME_GARAGEM || 'garagem').toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+            
+            const changeOptions = {
+                event: '*',
+                schema: 'public',
+                table: 'status_antenas'
+            };
+            if (GARAGEM_ID && GARAGEM_ID.length > 10) {
+                changeOptions.filter = `garagem_id=eq.${GARAGEM_ID}`;
+            }
+
+            const channel = sb.channel(channelName)
+                .on('postgres_changes', changeOptions, (payload) => {
                     console.log('⚡ [Realtime Supabase] Alteração de antena recebida:', payload);
                     if (payload.new) {
                         tratarMudancaAntenaRealtime(payload.new);
@@ -477,7 +482,7 @@
                     if (status === 'SUBSCRIBED') {
                         if (pill) {
                             pill.className = "realtime-badge";
-                            pill.innerHTML = "🟢 Realtime Ativo (Supabase)";
+                            pill.innerHTML = `🟢 Realtime (${escapeHtml(NOME_GARAGEM)})`;
                         }
                     } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
                         if (pill) {
