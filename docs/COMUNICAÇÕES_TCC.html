@@ -128,23 +128,6 @@
     .offline-urgency-low td:first-child { border-left: 4px solid #f59e0b !important; }
     .offline-urgency-mid td:first-child { border-left: 4px solid #ef4444 !important; }
     .offline-urgency-high td:first-child { border-left: 4px solid #8b5cf6 !important; }
-    /* Heatmap */
-    .heatmap-grid { display: grid; grid-template-columns: repeat(24, 1fr); gap: 3px; }
-    .hm-cell { height: 22px; border-radius: 4px; background: rgba(37,99,235,0.08); position: relative; cursor: pointer; transition: transform 0.15s; }
-    .hm-cell:hover { transform: scale(1.15); z-index: 10; }
-    
-    /* Mute button */
-    #mute-btn { position: fixed; bottom: 24px; right: 24px; z-index: 999; background: var(--card-bg);
-        border: 2px solid var(--border); border-radius: 50px; padding: 10px 18px; cursor: pointer;
-        font-size: 0.85rem; font-weight: 600; box-shadow: var(--shadow); color: var(--text);
-        display: flex; align-items: center; gap: 8px; transition: 0.2s; user-select: none; }
-    #mute-btn:hover { border-color: var(--primary); }
-    #mute-btn.muted { background: #ef4444; color: #fff; border-color: #ef4444; }
-
-    /* Ping result badge */
-    .ping-result { font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
-    .ping-ok { background: rgba(16,185,129,0.15); color: #10b981; }
-    .ping-fail { background: rgba(239,68,68,0.15); color: #ef4444; }
 </style>
 </head>
 <body>
@@ -156,7 +139,7 @@
                 <h1 style="margin:0; font-size: 1.5rem;">📊 TCC</h1>
                 <span id="realtime-status-pill" class="realtime-badge disconnected">⚪ Realtime Conectando...</span>
             </div>
-            <small style="color: var(--text-light); display: block; margin-top: 5px;">Última atualização: 16:22</small>
+            <small style="color: var(--text-light); display: block; margin-top: 5px;">Última atualização: 16:45</small>
         </div>
         <div style="display: flex; gap: 10px;">
             <button class="btn btn-outline" onclick="toggleTheme()">🌓 Tema</button>
@@ -197,11 +180,6 @@
             <span class="kpi-title">Taxa de Sucesso</span>
             <div class="kpi-value" id="kpi-rate">0%</div>
         </div>
-        <div class="kpi-card" style="border-left: 5px solid #f59e0b; cursor: default;">
-            <span class="kpi-title">TMPF Médio</span>
-            <div class="kpi-value" id="kpi-tmpf">--</div>
-            <div class="kpi-sub" style="color: var(--text-light); font-size: 0.85rem;">Tempo Médio Para Falhas</div>
-        </div>
         <div class="kpi-card" style="border-left: 5px solid #8b5cf6; cursor: pointer;" onclick="switchTab('tab-antenas')">
             <span class="kpi-title">Antenas Ativas</span>
             <div class="kpi-value" id="kpi-antenas">0/0</div>
@@ -220,17 +198,6 @@
         </div>
     </div>
 
-    <!-- Mapa de Calor de Erros por Horário (30 dias) -->
-    <div class="chart-box" style="margin-bottom: 20px;">
-        <h3 style="margin-top:0; color:var(--text-light); font-size:1rem;">🗺️ Mapa de Calor de Erros por Horário (30 dias)</h3>
-        <div id="heatmap-container" style="padding: 4px 0;"></div>
-        <div style="font-size: 0.75rem; color: var(--text-light); margin-top: 6px; display: flex; align-items: center; gap: 15px;">
-            <span>🔴 Mais falhas</span>
-            <span>🔵 Menos / sem falhas</span>
-            <span>Cada coluna representa 1 hora do dia (0h às 23h)</span>
-        </div>
-    </div>
-
     <div class="controls-bar">
         <input type="text" id="globalSearch" class="search-input" placeholder="🔍 Buscar por prefixo, erro ou versão...">
         <select id="metaFilter" class="search-input" style="max-width: 200px;">
@@ -239,9 +206,9 @@
             <option value="has_error">Com Erro</option>
         </select>
         <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="font-size: 0.85rem; color: var(--text-light);">De:</span>
+            <span style="font-size: 0.85rem; color: var(--text-light); font-weight: 500;">De:</span>
             <input type="date" id="datePicker" class="search-input" value="2026-10-29" style="max-width: 135px;">
-            <span style="font-size: 0.85rem; color: var(--text-light);">Até:</span>
+            <span style="font-size: 0.85rem; color: var(--text-light); font-weight: 500;">Até:</span>
             <input type="date" id="datePickerFim" class="search-input" value="2026-10-29" style="max-width: 135px;">
         </div>
     </div>
@@ -286,15 +253,6 @@
         </div>
         <div class="antenna-grid" id="antenas-cards-container"></div>
 
-        <!-- Botão Exportar CSV do Histórico -->
-        <div style="display: flex; justify-content: flex-end; margin: 20px 0 8px 0;">
-            <button onclick="exportarHistoricoCSV()"
-                    style="background: var(--primary); color: #fff; border: none; border-radius: 8px;
-                           padding: 8px 18px; font-size: 0.85rem; cursor: pointer; font-weight: 600;
-                           display: flex; align-items: center; gap: 8px; box-shadow: var(--shadow);">
-                📥 Exportar Histórico (CSV)
-            </button>
-        </div>
         <!-- Painel retrátil do histórico de antenas -->
         <div id="hist-toggle-bar" onclick="toggleHistoricoAntenas()"
              style="display:flex;justify-content:space-between;align-items:center;margin:30px 0 0 0;
@@ -329,11 +287,6 @@
     </div>
 
 </div>
-
-<!-- Botão Silenciar Alertas -->
-<button id="mute-btn" onclick="toggleMuteAlerts()" title="Silenciar alertas sonoros por 30 minutos">
-    <span id="mute-icon">🔔</span> Silenciar Alertas
-</button>
 
 <!-- MODAL COM ABAS DE DETALHES -->
 <div id="modalInfo" class="modal">
@@ -374,8 +327,8 @@
     const GARAGEM_ID = "d76e40ba-4137-4134-9984-2a5f01bf7e93";
 
     // Antenas: Status Atual e Histórico de Alterações
-    let ANTENAS = JSON.parse(atob("W3sibm9tZSI6ICJhbnRlbmExIiwgImlwIjogIjE3Mi41NC4yMDMuMTAxIiwgInN0YXR1cyI6ICJvbmxpbmUiLCAidWx0aW1vX3BpbmciOiAiMjkvMTAvMjAyNiAxNjoyMjo0NSIsICJ1bHRpbWFfYWx0ZXJhY2FvIjogIjI5LzEwLzIwMjYgMTY6MTk6NTUiLCAiZGV0YWxoZXMiOiAiSFRUUCAyMDAgT0sifV0="));
-    let ANTENAS_HISTORICO = JSON.parse(atob("W3siZGF0YV9ob3JhIjogIjI5LzEwLzIwMjYgMTY6MTk6NTUiLCAibm9tZSI6ICJhbnRlbmExIiwgImlwIjogIjE3Mi41NC4yMDMuMTAxIiwgInN0YXR1c19hbnRlcmlvciI6ICJ2ZXJpZmljYW5kbyIsICJub3ZvX3N0YXR1cyI6ICJvbmxpbmUiLCAiZGV0YWxoZXMiOiAiSFRUUCAyMDAgT0sifSwgeyJkYXRhX2hvcmEiOiAiMjkvMTAvMjAyNiAxMTowMzo0NiIsICJub21lIjogImFudGVuYTEiLCAiaXAiOiAiMTcyLjU0LjIwMy4xMDEiLCAic3RhdHVzX2FudGVyaW9yIjogInZlcmlmaWNhbmRvIiwgIm5vdm9fc3RhdHVzIjogIm9ubGluZSIsICJkZXRhbGhlcyI6ICJIVFRQIDIwMCBPSyJ9LCB7ImRhdGFfaG9yYSI6ICIyOS8xMC8yMDI2IDEwOjQ3OjEzIiwgIm5vbWUiOiAiYW50ZW5hMSIsICJpcCI6ICIxNzIuNTQuMjAzLjEwMSIsICJzdGF0dXNfYW50ZXJpb3IiOiAidmVyaWZpY2FuZG8iLCAibm92b19zdGF0dXMiOiAib25saW5lIiwgImRldGFsaGVzIjogIkhUVFAgMjAwIE9LIn0sIHsiZGF0YV9ob3JhIjogIjIxLzEwLzIwMjYgMTY6NTA6MDEiLCAibm9tZSI6ICJhbnRlbmExIiwgImlwIjogIjE3Mi41NC4yMDMuMTAxIiwgInN0YXR1c19hbnRlcmlvciI6ICJ2ZXJpZmljYW5kbyIsICJub3ZvX3N0YXR1cyI6ICJvbmxpbmUiLCAiZGV0YWxoZXMiOiAiSFRUUCAyMDAgT0sifSwgeyJkYXRhX2hvcmEiOiAiMjEvMTAvMjAyNiAxNjozMDo0MSIsICJub21lIjogImFudGVuYTEiLCAiaXAiOiAiMTcyLjU0LjIwMy4xMDEiLCAic3RhdHVzX2FudGVyaW9yIjogInZlcmlmaWNhbmRvIiwgIm5vdm9fc3RhdHVzIjogIm9ubGluZSIsICJkZXRhbGhlcyI6ICJIVFRQIDIwMCBPSyJ9LCB7ImRhdGFfaG9yYSI6ICIyMC8xMC8yMDI2IDEyOjI5OjQ0IiwgIm5vbWUiOiAiYW50ZW5hMSIsICJpcCI6ICIxNzIuNTQuMjAzLjEwMSIsICJzdGF0dXNfYW50ZXJpb3IiOiAidmVyaWZpY2FuZG8iLCAibm92b19zdGF0dXMiOiAib25saW5lIiwgImRldGFsaGVzIjogIkhUVFAgMjAwIE9LIn1d"));
+    let ANTENAS = JSON.parse(atob("W3sibm9tZSI6ICJhbnRlbmExIiwgImlwIjogIjE3Mi41NC4yMDMuMTAxIiwgInN0YXR1cyI6ICJvbmxpbmUiLCAidWx0aW1vX3BpbmciOiAiMjkvMTAvMjAyNiAxNjo0NToyMyIsICJ1bHRpbWFfYWx0ZXJhY2FvIjogIjI5LzEwLzIwMjYgMTY6NDQ6MDMiLCAiZGV0YWxoZXMiOiAiSFRUUCAyMDAgT0sifV0="));
+    let ANTENAS_HISTORICO = JSON.parse(atob("W3siZGF0YV9ob3JhIjogIjI5LzEwLzIwMjYgMTY6NDQ6MDMiLCAibm9tZSI6ICJhbnRlbmExIiwgImlwIjogIjE3Mi41NC4yMDMuMTAxIiwgInN0YXR1c19hbnRlcmlvciI6ICJ2ZXJpZmljYW5kbyIsICJub3ZvX3N0YXR1cyI6ICJvbmxpbmUiLCAiZGV0YWxoZXMiOiAiSFRUUCAyMDAgT0sifSwgeyJkYXRhX2hvcmEiOiAiMjkvMTAvMjAyNiAxNjoxOTo1NSIsICJub21lIjogImFudGVuYTEiLCAiaXAiOiAiMTcyLjU0LjIwMy4xMDEiLCAic3RhdHVzX2FudGVyaW9yIjogInZlcmlmaWNhbmRvIiwgIm5vdm9fc3RhdHVzIjogIm9ubGluZSIsICJkZXRhbGhlcyI6ICJIVFRQIDIwMCBPSyJ9LCB7ImRhdGFfaG9yYSI6ICIyOS8xMC8yMDI2IDExOjAzOjQ2IiwgIm5vbWUiOiAiYW50ZW5hMSIsICJpcCI6ICIxNzIuNTQuMjAzLjEwMSIsICJzdGF0dXNfYW50ZXJpb3IiOiAidmVyaWZpY2FuZG8iLCAibm92b19zdGF0dXMiOiAib25saW5lIiwgImRldGFsaGVzIjogIkhUVFAgMjAwIE9LIn0sIHsiZGF0YV9ob3JhIjogIjI5LzEwLzIwMjYgMTA6NDc6MTMiLCAibm9tZSI6ICJhbnRlbmExIiwgImlwIjogIjE3Mi41NC4yMDMuMTAxIiwgInN0YXR1c19hbnRlcmlvciI6ICJ2ZXJpZmljYW5kbyIsICJub3ZvX3N0YXR1cyI6ICJvbmxpbmUiLCAiZGV0YWxoZXMiOiAiSFRUUCAyMDAgT0sifSwgeyJkYXRhX2hvcmEiOiAiMjEvMTAvMjAyNiAxNjo1MDowMSIsICJub21lIjogImFudGVuYTEiLCAiaXAiOiAiMTcyLjU0LjIwMy4xMDEiLCAic3RhdHVzX2FudGVyaW9yIjogInZlcmlmaWNhbmRvIiwgIm5vdm9fc3RhdHVzIjogIm9ubGluZSIsICJkZXRhbGhlcyI6ICJIVFRQIDIwMCBPSyJ9LCB7ImRhdGFfaG9yYSI6ICIyMS8xMC8yMDI2IDE2OjMwOjQxIiwgIm5vbWUiOiAiYW50ZW5hMSIsICJpcCI6ICIxNzIuNTQuMjAzLjEwMSIsICJzdGF0dXNfYW50ZXJpb3IiOiAidmVyaWZpY2FuZG8iLCAibm92b19zdGF0dXMiOiAib25saW5lIiwgImRldGFsaGVzIjogIkhUVFAgMjAwIE9LIn0sIHsiZGF0YV9ob3JhIjogIjIwLzEwLzIwMjYgMTI6Mjk6NDQiLCAibm9tZSI6ICJhbnRlbmExIiwgImlwIjogIjE3Mi41NC4yMDMuMTAxIiwgInN0YXR1c19hbnRlcmlvciI6ICJ2ZXJpZmljYW5kbyIsICJub3ZvX3N0YXR1cyI6ICJvbmxpbmUiLCAiZGV0YWxoZXMiOiAiSFRUUCAyMDAgT0sifV0="));
     let offlineAlerts = new Set();
     
     const datePicker = document.getElementById('datePicker');
@@ -391,7 +344,6 @@
     }, 1000);
 
     function tocarAlertaSonoro() {
-        if (Date.now() < mutedUntil) return;
         try {
             const AudioCtx = window.AudioContext || window.webkitAudioContext;
             if (!AudioCtx) return;
@@ -634,14 +586,6 @@
                             <div class="ant-meta">🕒 Último teste: ${escapeHtml(ant.ultimo_ping || '-')}</div>
                             <div class="ant-meta">🔄 Última mudança: ${escapeHtml(ant.ultima_alteracao || '-')}</div>
                             <div class="ant-meta" style="font-size:0.75rem;">ℹ️ ${escapeHtml(ant.detalhes || '')}</div>
-                            <div class="ant-meta" style="margin-top:8px; display:flex; align-items:center; gap:8px;">
-                                <button onclick="pingManual('${escapeHtml(ant.ip)}', this)"
-                                        style="font-size:0.75rem; padding:4px 10px; border:1px solid var(--border);
-                                               background:var(--card-bg); border-radius:6px; cursor:pointer; color:var(--text);">
-                                    🏓 Testar Ping
-                                </button>
-                                <span class="ping-result" id="ping-${(ant.ip||'x').split('.').join('-')}"></span>
-                            </div>
                         </div>
                     `);
                 });
@@ -673,7 +617,8 @@
         let counts = { online: 0, offline: 0, critical: 0, total: 0 };
         const selParts = selectedDateStr.split('-');
         const datePickerFimEl = document.getElementById('datePickerFim');
-        const endDateStr = (datePickerFimEl && datePickerFimEl.value) ? datePickerFimEl.value : selectedDateStr;
+        let endDateStr = (datePickerFimEl && datePickerFimEl.value) ? datePickerFimEl.value : selectedDateStr;
+        if (endDateStr < selectedDateStr) endDateStr = selectedDateStr;
         const endParts = endDateStr.split('-');
         const dateEndObj = new Date(parseInt(endParts[0]), parseInt(endParts[1])-1, parseInt(endParts[2]), 23, 59, 59);
         const dateStartObj = new Date(parseInt(selParts[0]), parseInt(selParts[1])-1, parseInt(selParts[2]), 0, 0, 0);
@@ -790,8 +735,6 @@
         }
 
         applyFilters(); 
-        atualizarKpiTmpf();
-        renderHeatmap();
         renderCharts(selectedDateStr, counts);
     }
 
@@ -837,186 +780,6 @@
             }
         }
     }
-
-    // ===== CONTROLE DE SILENCIAMENTO =====
-    let mutedUntil = 0;
-    let muteTimer = null;
-    function toggleMuteAlerts() {
-        try {
-            const now = Date.now();
-            const btn = document.getElementById('mute-btn');
-            if (now < mutedUntil) {
-                mutedUntil = 0;
-                if (muteTimer) clearTimeout(muteTimer);
-                if (btn) {
-                    btn.classList.remove('muted');
-                    btn.innerHTML = '<span id="mute-icon">🔔</span> Silenciar Alertas';
-                }
-                if (typeof showToast === 'function') showToast('Alertas Reativados', 'Os alertas sonoros foram reativados.', 'success');
-            } else {
-                mutedUntil = now + 30 * 60 * 1000;
-                if (btn) {
-                    btn.classList.add('muted');
-                    btn.innerHTML = '<span id="mute-icon">🔕</span> Mudo (30 min)';
-                }
-                if (typeof showToast === 'function') showToast('Alertas Silenciados', 'Alertas sonoros silenciados por 30 minutos.', 'success');
-                muteTimer = setTimeout(() => {
-                    mutedUntil = 0;
-                    const b = document.getElementById('mute-btn');
-                    if (b) {
-                        b.classList.remove('muted');
-                        b.innerHTML = '<span id="mute-icon">🔔</span> Silenciar Alertas';
-                    }
-                }, 30 * 60 * 1000);
-            }
-        } catch(err) {
-            console.error("Erro toggleMuteAlerts:", err);
-        }
-    }
-
-    // ===== PING MANUAL DE ANTENAS =====
-    async function pingManual(ip, btn) {
-        if (!ip) return;
-        const safeIpId = ip.split('.').join('-');
-        const resultEl = document.getElementById('ping-' + safeIpId);
-        if (btn) { btn.disabled = true; btn.textContent = '... '; }
-        if (resultEl) { resultEl.className = 'ping-result'; resultEl.textContent = ''; }
-        try {
-            const controller = new AbortController();
-            const tid = setTimeout(() => controller.abort(), 3500);
-            const t0 = Date.now();
-            await fetch(`http://${ip}`, { mode: 'no-cors', signal: controller.signal });
-            clearTimeout(tid);
-            const rtt = Date.now() - t0;
-            if (resultEl) {
-                resultEl.className = 'ping-result ping-ok';
-                resultEl.textContent = `✔ ${rtt}ms`;
-            }
-        } catch(e) {
-            if (e.name === 'AbortError') {
-                if (resultEl) {
-                    resultEl.className = 'ping-result ping-fail';
-                    resultEl.textContent = '✖ Timeout';
-                }
-            } else {
-                if (resultEl) {
-                    resultEl.className = 'ping-result ping-ok';
-                    resultEl.textContent = '✔ AlcanÃ§Ã¡vel';
-                }
-            }
-        } finally {
-            if (btn) { btn.disabled = false; btn.textContent = '🏓 Testar Ping'; }
-        }
-    }
-
-    // ===== EXPORTAR HISTÓRICO CSV =====
-    function exportarHistoricoCSV() {
-        try {
-            const rows = document.querySelectorAll('#list-antenas-historico tr');
-            if (!rows.length) {
-                alert('Nenhum evento no histórico para exportar.');
-                return;
-            }
-            const headers = ['Data/Hora', 'Antena', 'IP', 'Status Anterior', 'Novo Status', 'Detalhes'];
-            const lines = [headers.join(';')];
-            rows.forEach(tr => {
-                const cells = Array.from(tr.querySelectorAll('td')).map(td => '"' + (td.innerText || '').replace(/"/g, '""').trim() + '"');
-                if (cells.length >= 6) {
-                    lines.push(cells.join(';'));
-                }
-            });
-            const blob = new Blob(["﻿" + lines.join('
-
-')], { type: 'text/csv;charset=utf-8;' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            const agora = new Date().toISOString().slice(0, 10);
-            a.download = `historico_antenas_${agora}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        } catch(err) {
-            console.error("Erro exportarHistoricoCSV:", err);
-        }
-    }
-
-    // ===== KPI TMPF (Tempo Médio Para Falhas - PT-BR) =====
-    function atualizarKpiTmpf() {
-        try {
-            const el = document.getElementById('kpi-tmpf');
-            if (!el || typeof HISTORY === 'undefined') return;
-            const veiculos = Object.keys(HISTORY || {});
-            if (!veiculos.length) { el.innerText = '--'; return; }
-            let totalFalhas = 0;
-            const now = new Date();
-            const dias30 = new Date(now - 30 * 24 * 3600 * 1000);
-            veiculos.forEach(v => {
-                const logs = HISTORY[v] || [];
-                logs.forEach(l => {
-                    if (l && l.e && String(l.e).trim() !== '') {
-                        const d = new Date(String(l.d).replace(' ', 'T'));
-                        if (d >= dias30 && !isNaN(d.getTime())) totalFalhas++;
-                    }
-                });
-            });
-            if (totalFalhas === 0) {
-                el.innerText = '100%';
-                return;
-            }
-            const horasTotais = veiculos.length * 30 * 24;
-            const tmpf = (horasTotais / totalFalhas).toFixed(1);
-            el.innerText = `${tmpf}h`;
-        } catch(err) {
-            console.error("Erro ao calcular TMPF:", err);
-        }
-    }
-
-    // ===== MAPA DE CALOR DE ERROS POR HORÁRIO (30 DIAS) =====
-    function renderHeatmap() {
-        try {
-            const container = document.getElementById('heatmap-container');
-            if (!container || typeof HISTORY === 'undefined') return;
-            const counts = new Array(24).fill(0);
-            const dias30 = new Date(Date.now() - 30 * 24 * 3600 * 1000);
-            Object.values(HISTORY || {}).forEach(logs => {
-                (logs || []).forEach(l => {
-                    if (l && l.e && String(l.e).trim() !== '') {
-                        const d = new Date(String(l.d).replace(' ', 'T'));
-                        if (d >= dias30 && !isNaN(d.getTime())) {
-                            const h = d.getHours();
-                            if (h >= 0 && h < 24) counts[h]++;
-                        }
-                    }
-                });
-            });
-            const maxVal = Math.max(...counts, 1);
-            let html = '<div class="heatmap-grid">';
-            for (let h = 0; h < 24; h++) {
-                const v = counts[h];
-                const intensity = maxVal > 0 ? (v / maxVal) : 0;
-                let bg;
-                if (v === 0) {
-                    bg = 'rgba(37,99,235,0.08)';
-                } else {
-                    const r = Math.round(239 * intensity + 37 * (1 - intensity));
-                    const g = Math.round(68 * intensity + 99 * (1 - intensity));
-                    const b = Math.round(68 * intensity + 235 * (1 - intensity));
-                    bg = `rgba(${r},${g},${b},${0.25 + 0.75 * intensity})`;
-                }
-                html += `<div class="hm-cell" style="background:${bg};" title="${h}h: ${v} erro(s)"></div>`;
-            }
-            html += '</div>';
-            html += '<div style="display:flex; gap:3px; margin-top:6px; font-size:0.72rem; color:var(--text-light);">';
-            for (let h = 0; h < 24; h++) {
-                html += `<div style="flex:1; text-align:center;">${h}</div>`;
-            }
-            html += '</div>';
-            container.innerHTML = html;
-        } catch(err) {
-            console.error("Erro ao renderizar mapa de calor:", err);
-        }
-    }
-
     function renderCharts(dateStr, counts) {
         const textColor = document.body.getAttribute('data-theme') === 'dark' ? '#cbd5e1' : '#334155';
         if(chartStatus) chartStatus.destroy();
